@@ -1,0 +1,505 @@
+import React, { useState, useEffect } from 'react';
+import { TreePine, Hammer, BookOpen, Trophy, ArrowRight, RotateCcw, Check, X, Award, HelpCircle } from 'lucide-react';
+
+// --- DATOS DEL JUEGO Y CONTENIDO EDUCATIVO ---
+
+const studyData = [
+  {
+    title: "Maderas Naturales",
+    icon: <TreePine className="w-8 h-8 text-green-700" />,
+    content: "Se obtienen directamente de los troncos de los árboles.",
+    details: [
+      { label: "Duras", text: "Roble, Haya, Caoba. Crecimiento lento, caras, resistentes." },
+      { label: "Blandas", text: "Pino, Abeto. Crecimiento rápido, ligeras, fáciles de trabajar." }
+    ]
+  },
+  {
+    title: "Maderas Artificiales",
+    icon: <Hammer className="w-8 h-8 text-orange-700" />,
+    content: "Fabricadas a partir de virutas, láminas o fibras prensadas con cola.",
+    details: [
+      { label: "Contrachapado", text: "Láminas finas de madera pegadas alternando el sentido de la fibra. Muy resistente." },
+      { label: "Aglomerado", text: "Virutas de madera prensadas con cola. Se deshace con la humedad. Barato." },
+      { label: "Tablero de Fibras (DM)", text: "Polvo de madera prensado. Textura muy fina y uniforme." }
+    ]
+  },
+  {
+    title: "Propiedades",
+    icon: <BookOpen className="w-8 h-8 text-blue-700" />,
+    content: "Las características que definen el uso de la madera.",
+    details: [
+      { label: "Higroscopicidad", text: "Capacidad de absorber y desprender humedad." },
+      { label: "Dureza", text: "Resistencia a ser rayada o penetrada." },
+      { label: "Densidad", text: "Relación entre peso y volumen (¿flota o se hunde?)." }
+    ]
+  }
+];
+
+const quizQuestions = [
+  {
+    question: "¿Qué madera artificial está formada por láminas finas cruzadas entre sí?",
+    options: ["Aglomerado", "Contrachapado", "DM (Fibras)", "Pino"],
+    correct: 1,
+    explanation: "El contrachapado gana resistencia gracias a que sus láminas se pegan con las vetas perpendiculares."
+  },
+  {
+    question: "¿Cuál de estas maderas es considerada una madera dura?",
+    options: ["Pino", "Abeto", "Roble", "Balsa"],
+    correct: 2,
+    explanation: "El Roble es una madera dura, densa y resistente, de crecimiento lento."
+  },
+  {
+    question: "¿Qué propiedad hace que la madera se hinche cuando hay humedad?",
+    options: ["Conductividad", "Higroscopicidad", "Tenacidad", "Dureza"],
+    correct: 1,
+    explanation: "La higroscopicidad es la capacidad de la madera de absorber o ceder humedad del ambiente."
+  },
+  {
+    question: "¿Para qué se suele usar el Aglomerado?",
+    options: ["Vigas de edificios", "Muebles baratos recubiertos de melamina", "Barcos de lujo", "Instrumentos musicales"],
+    correct: 1,
+    explanation: "El aglomerado es barato pero feo y frágil ante el agua, por eso se usa en muebles recubiertos."
+  },
+  {
+    question: "¿Cuál es la principal ventaja de las maderas prefabricadas (artificiales)?",
+    options: ["Huelen mejor", "Son más caras", "Evitan parásitos y tienen tamaños ilimitados", "Son 100% naturales"],
+    correct: 2,
+    explanation: "Las artificiales no tienen nudos ni carcoma y se pueden fabricar en tableros muy grandes."
+  }
+];
+
+const sortingItems = [
+  { name: "Pino", type: "blanda" },
+  { name: "Roble", type: "dura" },
+  { name: "Aglomerado", type: "artificial" },
+  { name: "Contrachapado", type: "artificial" },
+  { name: "Haya", type: "dura" },
+  { name: "Abeto", type: "blanda" },
+  { name: "DM (Fibras)", type: "artificial" },
+  { name: "Caoba", type: "dura" }
+];
+
+// --- COMPONENTES PRINCIPALES ---
+
+export default function App() {
+  const [currentView, setCurrentView] = useState('menu'); // menu, study, quiz, sorting
+  const [score, setScore] = useState(0);
+
+  const goMenu = () => setCurrentView('menu');
+
+  return (
+    <div className="min-h-screen bg-amber-50 font-sans text-amber-900 selection:bg-amber-200">
+      {/* Header */}
+      <header className="bg-amber-800 text-white p-4 shadow-lg border-b-4 border-amber-900">
+        <div className="max-w-4xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <TreePine className="w-6 h-6" />
+            <h1 className="text-xl md:text-2xl font-bold tracking-wider">TALLER DE TECNOLOGÍA</h1>
+          </div>
+          {currentView !== 'menu' && (
+             <button onClick={goMenu} className="text-xs md:text-sm bg-amber-700 hover:bg-amber-600 px-3 py-1 rounded transition">
+               Salir al Menú
+             </button>
+          )}
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto p-4 md:p-6">
+        {currentView === 'menu' && <MainMenu setView={setCurrentView} />}
+        {currentView === 'study' && <StudyMode goBack={goMenu} />}
+        {currentView === 'quiz' && <QuizGame goBack={goMenu} />}
+        {currentView === 'sorting' && <SortingGame goBack={goMenu} />}
+      </main>
+
+      {/* Footer */}
+      <footer className="text-center text-amber-700/60 p-4 text-sm mt-8">
+        Recurso educativo para Tecnología - 2º ESO
+      </footer>
+    </div>
+  );
+}
+
+// --- VISTA: MENÚ PRINCIPAL ---
+function MainMenu({ setView }) {
+  return (
+    <div className="flex flex-col gap-6 animate-fadeIn">
+      <div className="text-center space-y-2 mb-4">
+        <h2 className="text-3xl font-bold text-amber-900">¿Cuánto sabes sobre la madera?</h2>
+        <p className="text-amber-700 text-lg">Elige una actividad para empezar a aprender.</p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Card 1: Estudio */}
+        <button 
+          onClick={() => setView('study')}
+          className="group relative overflow-hidden bg-white p-6 rounded-xl shadow-md border-2 border-amber-100 hover:border-amber-400 hover:shadow-xl transition-all text-left"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+            <BookOpen className="w-24 h-24 text-amber-600" />
+          </div>
+          <div className="bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+            <BookOpen className="w-6 h-6 text-blue-700" />
+          </div>
+          <h3 className="text-xl font-bold mb-2">Repaso Teórico</h3>
+          <p className="text-sm text-gray-600">Fichas rápidas sobre tipos y propiedades. ¡Empieza aquí!</p>
+        </button>
+
+        {/* Card 2: Quiz */}
+        <button 
+          onClick={() => setView('quiz')}
+          className="group relative overflow-hidden bg-white p-6 rounded-xl shadow-md border-2 border-amber-100 hover:border-amber-400 hover:shadow-xl transition-all text-left"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+            <HelpCircle className="w-24 h-24 text-amber-600" />
+          </div>
+          <div className="bg-purple-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+            <HelpCircle className="w-6 h-6 text-purple-700" />
+          </div>
+          <h3 className="text-xl font-bold mb-2">Trivial Carpintero</h3>
+          <p className="text-sm text-gray-600">5 preguntas clave para demostrar lo que sabes.</p>
+        </button>
+
+        {/* Card 3: Sorting */}
+        <button 
+          onClick={() => setView('sorting')}
+          className="group relative overflow-hidden bg-white p-6 rounded-xl shadow-md border-2 border-amber-100 hover:border-amber-400 hover:shadow-xl transition-all text-left"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+            <Hammer className="w-24 h-24 text-amber-600" />
+          </div>
+          <div className="bg-orange-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+            <Hammer className="w-6 h-6 text-orange-700" />
+          </div>
+          <h3 className="text-xl font-bold mb-2">El Clasificador</h3>
+          <p className="text-sm text-gray-600">¿Natural o Artificial? Clasifica las maderas rápidamente.</p>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// --- VISTA: MODO ESTUDIO ---
+function StudyMode({ goBack }) {
+  return (
+    <div className="animate-fadeIn">
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={goBack} className="p-2 hover:bg-amber-200 rounded-full transition"><RotateCcw size={20}/></button>
+        <h2 className="text-2xl font-bold">Fichas de Estudio</h2>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {studyData.map((item, idx) => (
+          <div key={idx} className="bg-white rounded-xl shadow-sm border border-amber-200 overflow-hidden">
+            <div className="p-4 bg-amber-50 border-b border-amber-100 flex items-center gap-3">
+              {item.icon}
+              <h3 className="font-bold text-lg">{item.title}</h3>
+            </div>
+            <div className="p-4">
+              <p className="text-sm italic text-gray-600 mb-4">{item.content}</p>
+              <div className="space-y-3">
+                {item.details.map((detail, dIdx) => (
+                  <div key={dIdx} className="text-sm bg-gray-50 p-2 rounded border border-gray-100">
+                    <span className="font-bold text-amber-800 block">{detail.label}</span>
+                    <span className="text-gray-700">{detail.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <div className="mt-8 text-center bg-yellow-100 p-4 rounded-lg border border-yellow-200 text-yellow-800">
+        💡 <strong>Tip para el examen:</strong> Recuerda que el <em>Aglomerado</em> y el <em>DM</em> no soportan bien el agua, mientras que las maderas duras como el <em>Roble</em> son muy resistentes.
+      </div>
+    </div>
+  );
+}
+
+// --- VISTA: TRIVIAL (QUIZ) ---
+function QuizGame({ goBack }) {
+  const [currentQ, setCurrentQ] = useState(0);
+  const [score, setScore] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [isFinished, setIsFinished] = useState(false);
+
+  const handleOptionClick = (index) => {
+    if (showResult) return;
+    setSelectedOption(index);
+    setShowResult(true);
+    if (index === quizQuestions[currentQ].correct) {
+      setScore(score + 1);
+    }
+  };
+
+  const nextQuestion = () => {
+    if (currentQ < quizQuestions.length - 1) {
+      setCurrentQ(currentQ + 1);
+      setShowResult(false);
+      setSelectedOption(null);
+    } else {
+      setIsFinished(true);
+    }
+  };
+
+  if (isFinished) {
+    return (
+      <GameOverScreen 
+        score={score} 
+        total={quizQuestions.length} 
+        title="Trivial Completado" 
+        onRestart={() => { setIsFinished(false); setCurrentQ(0); setScore(0); setShowResult(false); setSelectedOption(null); }}
+        goBack={goBack}
+      />
+    );
+  }
+
+  const question = quizQuestions[currentQ];
+
+  return (
+    <div className="max-w-2xl mx-auto animate-fadeIn">
+      <div className="mb-4 flex justify-between items-center text-sm font-bold text-amber-700">
+        <span>Pregunta {currentQ + 1} de {quizQuestions.length}</span>
+        <span>Puntos: {score}</span>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="w-full bg-amber-200 h-2 rounded-full mb-6">
+        <div 
+          className="bg-amber-600 h-2 rounded-full transition-all duration-300"
+          style={{ width: `${((currentQ) / quizQuestions.length) * 100}%` }}
+        ></div>
+      </div>
+
+      <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg border-b-4 border-amber-200">
+        <h3 className="text-xl md:text-2xl font-bold mb-6 text-gray-800">{question.question}</h3>
+        
+        <div className="space-y-3">
+          {question.options.map((option, idx) => {
+            let btnClass = "w-full p-4 rounded-lg text-left border-2 transition-all font-medium flex justify-between items-center ";
+            
+            if (!showResult) {
+              btnClass += "border-gray-200 hover:border-amber-400 hover:bg-amber-50 text-gray-700";
+            } else {
+              if (idx === question.correct) {
+                btnClass += "border-green-500 bg-green-50 text-green-800";
+              } else if (idx === selectedOption) {
+                btnClass += "border-red-500 bg-red-50 text-red-800";
+              } else {
+                btnClass += "border-gray-100 text-gray-400";
+              }
+            }
+
+            return (
+              <button 
+                key={idx} 
+                onClick={() => handleOptionClick(idx)}
+                disabled={showResult}
+                className={btnClass}
+              >
+                <span>{option}</span>
+                {showResult && idx === question.correct && <Check className="w-5 h-5" />}
+                {showResult && idx === selectedOption && idx !== question.correct && <X className="w-5 h-5" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {showResult && (
+          <div className="mt-6 p-4 bg-blue-50 text-blue-900 rounded-lg border border-blue-100 animate-slideIn">
+            <p className="font-bold mb-1">{selectedOption === question.correct ? "¡Correcto!" : "¡Vaya!"}</p>
+            <p className="text-sm">{question.explanation}</p>
+            <div className="mt-4 text-right">
+              <button 
+                onClick={nextQuestion}
+                className="bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition flex items-center gap-2 ml-auto"
+              >
+                {currentQ === quizQuestions.length - 1 ? "Ver Resultados" : "Siguiente"} <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- VISTA: JUEGO DE CLASIFICACIÓN ---
+function SortingGame({ goBack }) {
+  const [items, setItems] = useState([]);
+  const [currentItem, setCurrentItem] = useState(null);
+  const [score, setScore] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [feedback, setFeedback] = useState(null); // 'correct' | 'wrong'
+  const [isFinished, setIsFinished] = useState(false);
+
+  // Mezclar items al inicio
+  useEffect(() => {
+    restartGame();
+  }, []);
+
+  const restartGame = () => {
+    const shuffled = [...sortingItems].sort(() => 0.5 - Math.random());
+    setItems(shuffled);
+    setCurrentItem(shuffled[0]);
+    setScore(0);
+    setLives(3);
+    setFeedback(null);
+    setIsFinished(false);
+  };
+
+  const handleSort = (type) => {
+    if (!currentItem) return;
+
+    // Lógica simplificada: "Natural" agrupa dura y blanda para simplificar si el usuario elige solo natural, 
+    // pero aquí usamos 3 botones específicos: Dura, Blanda, Artificial.
+    
+    const isCorrect = currentItem.type === type;
+
+    if (isCorrect) {
+      setFeedback('correct');
+      setScore(score + 10);
+      setTimeout(() => {
+        nextItem();
+      }, 800);
+    } else {
+      setFeedback('wrong');
+      setLives(lives - 1);
+      if (lives - 1 <= 0) {
+        setIsFinished(true);
+      } else {
+        setTimeout(() => {
+          setFeedback(null); // reset feedback visual
+        }, 800);
+      }
+    }
+  };
+
+  const nextItem = () => {
+    const nextIndex = items.indexOf(currentItem) + 1;
+    if (nextIndex < items.length) {
+      setCurrentItem(items[nextIndex]);
+      setFeedback(null);
+    } else {
+      setIsFinished(true);
+    }
+  };
+
+  if (isFinished) {
+    return (
+      <GameOverScreen 
+        score={score} 
+        total={items.length * 10} 
+        title={lives > 0 ? "¡Clasificación Completa!" : "¡Te quedaste sin vidas!"} 
+        onRestart={restartGame}
+        goBack={goBack}
+        isPoints
+      />
+    );
+  }
+
+  if (!currentItem) return <div>Cargando...</div>;
+
+  return (
+    <div className="max-w-xl mx-auto text-center animate-fadeIn">
+      <div className="flex justify-between items-center mb-8 px-4">
+        <div className="bg-white px-4 py-2 rounded-full shadow border text-amber-800 font-bold">
+          Puntos: {score}
+        </div>
+        <div className="flex gap-1">
+          {[...Array(3)].map((_, i) => (
+             <span key={i} className={`text-2xl ${i < lives ? 'text-red-500' : 'text-gray-300'}`}>♥</span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <h3 className="text-gray-600 mb-2 text-sm uppercase tracking-wide">Clasifica esta madera:</h3>
+        <div className={`
+          text-4xl md:text-5xl font-black text-amber-900 bg-white p-12 rounded-2xl shadow-xl border-4
+          transition-colors duration-300
+          ${feedback === 'correct' ? 'border-green-400 bg-green-50' : ''}
+          ${feedback === 'wrong' ? 'border-red-400 bg-red-50' : 'border-amber-200'}
+        `}>
+          {currentItem.name}
+        </div>
+        {feedback === 'correct' && <p className="text-green-600 font-bold mt-4 animate-bounce">¡Correcto!</p>}
+        {feedback === 'wrong' && <p className="text-red-600 font-bold mt-4 animate-pulse">¡Incorrecto!</p>}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <button 
+          onClick={() => handleSort('blanda')}
+          disabled={!!feedback}
+          className="bg-amber-200 hover:bg-amber-300 text-amber-900 p-4 rounded-xl font-bold border-b-4 border-amber-400 active:border-b-0 active:translate-y-1 transition disabled:opacity-50"
+        >
+          Natural<br/><span className="text-sm font-normal">Blanda</span>
+        </button>
+        <button 
+          onClick={() => handleSort('dura')}
+          disabled={!!feedback}
+          className="bg-amber-700 hover:bg-amber-800 text-white p-4 rounded-xl font-bold border-b-4 border-amber-900 active:border-b-0 active:translate-y-1 transition disabled:opacity-50"
+        >
+          Natural<br/><span className="text-sm font-normal text-amber-200">Dura</span>
+        </button>
+        <button 
+          onClick={() => handleSort('artificial')}
+          disabled={!!feedback}
+          className="bg-gray-200 hover:bg-gray-300 text-gray-800 p-4 rounded-xl font-bold border-b-4 border-gray-400 active:border-b-0 active:translate-y-1 transition disabled:opacity-50"
+        >
+          Artificial<br/><span className="text-sm font-normal">Prefabricada</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// --- COMPONENTE: PANTALLA DE FIN ---
+function GameOverScreen({ score, total, title, onRestart, goBack, isPoints = false }) {
+  const percentage = isPoints ? (score / total) * 100 : (score / total) * 100;
+  
+  let message = "¡Sigue practicando!";
+  let Icon = RotateCcw;
+  
+  if (percentage === 100) {
+    message = "¡Maestro Carpintero! 🌲🪚";
+    Icon = Trophy;
+  } else if (percentage >= 70) {
+    message = "¡Muy buen trabajo!";
+    Icon = Award;
+  } else if (percentage >= 50) {
+    message = "Bien, pero puedes mejorar.";
+    Icon = Hammer;
+  }
+
+  return (
+    <div className="max-w-md mx-auto text-center bg-white p-8 rounded-2xl shadow-xl border-4 border-amber-200 animate-popIn">
+      <div className="bg-amber-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+        <Icon className="w-10 h-10 text-amber-700" />
+      </div>
+      
+      <h2 className="text-3xl font-bold text-amber-900 mb-2">{title}</h2>
+      <p className="text-gray-600 mb-6">{message}</p>
+      
+      <div className="text-5xl font-black text-amber-600 mb-8">
+        {score} <span className="text-xl text-gray-400 font-normal">/ {total}</span>
+      </div>
+
+      <div className="space-y-3">
+        <button 
+          onClick={onRestart}
+          className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-lg font-bold transition flex items-center justify-center gap-2"
+        >
+          <RotateCcw size={18} /> Jugar Otra Vez
+        </button>
+        <button 
+          onClick={goBack}
+          className="w-full bg-transparent hover:bg-gray-100 text-gray-600 py-3 rounded-lg font-medium transition"
+        >
+          Volver al Menú
+        </button>
+      </div>
+    </div>
+  );
+}
