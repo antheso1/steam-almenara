@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graficadora Matemática Pro</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React y ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Math.js (Motor Matemático) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+
+    <!-- Plotly.js (Nuevo Motor Gráfico: Más robusto y potente) -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#172033', 900: '#0f172a' },
+                        cyan: { 400: '#22d3ee', 500: '#06b6d4' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
+        /* Custom range slider */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #22d3ee; cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // --- Componente Wrapper para Plotly ---
+        // Esto asegura que React y Plotly se entiendan bien
+        const MathPlot = ({ xData, yData, range }) => {
+            const plotContainer = useRef(null);
+
+            useEffect(() => {
+                if (window.Plotly && plotContainer.current) {
+                    const trace = {
+                        x: xData,
+                        y: yData,
+                        mode: 'lines',
+                        type: 'scatter',
+                        line: {
+                            color: '#22d3ee',
+                            width: 3
+                        },
+                        name: 'f(x)'
+                    };
+
+                    const layout = {
+                        autosize: true,
+                        paper_bgcolor: 'rgba(0,0,0,0)',
+                        plot_bgcolor: 'rgba(0,0,0,0)',
+                        margin: { l: 40, r: 20, t: 20, b: 40 },
+                        xaxis: {
+                            gridcolor: '#334155',
+                            zerolinecolor: '#64748b',
+                            tickfont: { color: '#94a3b8' },
+                            range: [-range, range], // Zoom controlado por React
+                            fixedrange: false // Permitir zoom manual del usuario si quiere
+                        },
+                        yaxis: {
+                            gridcolor: '#334155',
+                            zerolinecolor: '#64748b',
+                            tickfont: { color: '#94a3b8' }
+                        },
+                        showlegend: false
+                    };
+
+                    const config = {
+                        responsive: true,
+                        displayModeBar: true, // Muestra herramientas de zoom/pan
+                        displaylogo: false,
+                        modeBarButtonsToRemove: ['lasso2d', 'select2d']
+                    };
+
+                    // newPlot crea o actualiza el gráfico de forma eficiente
+                    window.Plotly.react(plotContainer.current, [trace], layout, config);
+                }
+            }, [xData, yData, range]); // Se actualiza cuando cambian los datos o el rango
+
+            return <div ref={plotContainer} className="w-full h-full" />;
+        };
+
+        // --- Iconos ---
+        const IconMath = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19c2.5 0 2.5-14 5-14 2.5 0 2.5 14 5 14 2.5 0 2.5-14 5 14"/></svg>;
+        const IconAlert = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>;
+
+        function App() {
+            const [expression, setExpression] = useState("sin(x) * x");
+            const [range, setRange] = useState(10);
+            const [plotData, setPlotData] = useState({ x: [], y: [] });
+            const [error, setError] = useState(null);
+            const [ready, setReady] = useState(false);
+
+            // Comprobar si Plotly cargó
+            useEffect(() => {
+                const check = setInterval(() => {
+                    if (window.Plotly && window.math) {
+                        setReady(true);
+                        clearInterval(check);
+                    }
+                }, 100);
+                return () => clearInterval(check);
+            }, []);
+
+            // Generar datos matemáticos
+            const generateData = useCallback(() => {
+                if (!window.math) return;
+                
+                try {
+                    const compiled = window.math.compile(expression);
+                    const xValues = [];
+                    const yValues = [];
+                    
+                    // Más puntos para mayor suavidad
+                    const step = (range * 2) / 500; 
+
+                    for (let x = -range; x <= range; x += step) {
+                        let y = compiled.evaluate({ x });
+                        
+                        // Limpieza
+                        if (typeof y === 'object' && y.re) y = y.re;
+                        if (!isFinite(y) || isNaN(y)) y = null; 
+                        
+                        xValues.push(x);
+                        yValues.push(y);
+                    }
+
+                    setPlotData({ x: xValues, y: yValues });
+                    setError(null);
+                } catch (err) {
+                    setError("Error de sintaxis. Prueba 'x^2' o 'sin(x)'");
+                }
+            }, [expression, range]);
+
+            // Recalcular al cambiar inputs
+            useEffect(() => {
+                if (ready) generateData();
+            }, [ready, generateData]);
+
+            if (!ready) {
+                return <div className="flex h-screen items-center justify-center text-cyan-400">Cargando motor gráfico...</div>;
+            }
+
+            const presets = [
+                { name: "Parábola", expr: "x^2" },
+                { name: "Onda Seno", expr: "sin(x)" },
+                { name: "Exponencial", expr: "e^x" },
+                { name: "Amortiguada", expr: "sin(x)*x" },
+                { name: "Logaritmo", expr: "log(x)" },
+                { name: "Tangente", expr: "tan(x)" },
+                { name: "Valor Abs", expr: "abs(x)" },
+                { name: "Raíz", expr: "sqrt(x)" }
+            ];
+
+            return (
+                <div className="min-h-screen flex flex-col md:flex-row">
+                    
+                    {/* Panel Lateral */}
+                    <aside className="w-full md:w-80 bg-slate-900 border-r border-slate-800 p-6 flex flex-col gap-8 z-10 shadow-2xl">
+                        <div className="flex items-center gap-3 text-cyan-400 mb-4">
+                            <div className="p-2 bg-cyan-500/10 rounded-lg border border-cyan-500/20">
+                                <IconMath />
+                            </div>
+                            <h1 className="text-xl font-bold tracking-tight text-white">MathPlot Pro</h1>
+                        </div>
+
+                        {/* Input */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-2">Función f(x)</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-3 text-slate-500 font-mono">y =</span>
+                                <input 
+                                    type="text" 
+                                    value={expression}
+                                    onChange={(e) => setExpression(e.target.value)}
+                                    className={`w-full bg-slate-800 border ${error ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:ring-cyan-500'} rounded-xl py-2.5 pl-10 pr-4 text-white placeholder-slate-600 outline-none focus:ring-2 transition-all font-mono tracking-wide`}
+                                    placeholder="ej. x^2"
+                                />
+                            </div>
+                            {error && (
+                                <div className="flex items-center gap-2 mt-2 text-red-400 text-xs animate-pulse">
+                                    <IconAlert />
+                                    <span>{error}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Slider */}
+                        <div>
+                            <div className="flex justify-between mb-2">
+                                <label className="text-sm font-medium text-slate-400">Rango (Zoom)</label>
+                                <span className="text-xs font-mono text-cyan-400">[-{range}, {range}]</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                min="2" 
+                                max="100" 
+                                value={range} 
+                                onChange={(e) => setRange(Number(e.target.value))}
+                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                        </div>
+
+                        {/* Presets */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-3">Ejemplos Rápidos</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {presets.map(p => (
+                                    <button 
+                                        key={p.name}
+                                        onClick={() => setExpression(p.expr)}
+                                        className="px-3 py-2 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg border border-slate-700 transition-colors text-left"
+                                    >
+                                        {p.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="mt-auto pt-6 border-t border-slate-800 text-xs text-slate-500">
+                            <p>Usa sintaxis estándar: +, -, *, /, ^, sin(), cos(), etc.</p>
+                        </div>
+                    </aside>
+
+                    {/* Área del Gráfico */}
+                    <main className="flex-1 bg-slate-850 relative flex flex-col">
+                        <div className="flex-1 p-4 md:p-8 min-h-[400px] flex flex-col">
+                            <div className="w-full flex-1 bg-slate-900/50 rounded-3xl border border-slate-800/50 backdrop-blur-sm shadow-inner relative overflow-hidden p-2">
+                                
+                                {/* COMPONENTE DEL GRÁFICO */}
+                                <MathPlot 
+                                    xData={plotData.x} 
+                                    yData={plotData.y} 
+                                    range={range} 
+                                />
+
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
