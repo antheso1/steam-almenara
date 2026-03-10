@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrera de Multiplicación</title>
+    <!-- Carga la librería de Tailwind CSS, que necesita internet solo esta vez para cargar el estilo, 
+         pero el juego en sí funciona después. Si estás preocupado por el acceso a internet, 
+         podemos reemplazar esto con CSS puro, pero dejaré Tailwind para el diseño moderno. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos generales */
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&display=swap');
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: #ff9800; /* Naranja brillante para un look infantil */
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Contenedor principal del juego */
+        .container {
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+            max-width: 400px;
+            width: 100%;
+            padding: 30px;
+            text-align: center;
+        }
+
+        /* Texto dentro del contenedor (debe ser oscuro) */
+        .container * {
+            color: #333333;
+        }
+
+        /* Título */
+        h1 {
+            color: #e53935; /* Rojo de corazón */
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+        
+        /* Marcador y Temporizador */
+        .score-box {
+            background-color: #fffde7; /* Amarillo muy claro */
+            padding: 10px;
+            border-radius: 0.75rem;
+            border: 2px dashed #ffb74d; /* Naranja pastel */
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            font-weight: 700;
+        }
+
+        /* Área de Pregunta */
+        #question-area {
+            background-color: #e3f2fd; /* Azul cielo muy claro */
+            padding: 20px;
+            border-radius: 1rem;
+            margin-bottom: 20px;
+            border: 3px solid #64b5f6; /* Azul brillante */
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        /* Entrada de Respuesta */
+        #answer-input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 3px solid #ccc;
+            border-radius: 0.75rem;
+            font-size: 1.5rem;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+        #answer-input:focus {
+            border-color: #66bb6a; /* Verde al enfocar */
+            outline: none;
+        }
+
+        /* Estilo de Botones */
+        .game-button {
+            padding: 12px 25px;
+            border-radius: 0.75rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 4px 0 0 #d32f2f; /* Sombra roja oscura */
+            border: none;
+            background-color: #f44336; /* Rojo vivo */
+            color: white;
+            width: 100%;
+            text-transform: uppercase;
+        }
+        .game-button:hover {
+            background-color: #e53935;
+        }
+        .game-button:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 0 #d32f2f;
+        }
+
+        /* Botón de Inicio/Reinicio especial */
+        #start-button {
+            background-color: #4caf50; /* Verde */
+            box-shadow: 0 4px 0 0 #388e3c;
+        }
+        #start-button:hover {
+            background-color: #43a047;
+        }
+        #start-button:active {
+            box-shadow: 0 0 0 0 #388e3c;
+        }
+        
+        /* Mensaje de Fin de Juego */
+        #game-over-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            background-color: #ffe0b2; /* Naranja muy claro */
+            border: 2px solid #ffb74d;
+        }
+        
+        /* Animación para el color del temporizador */
+        .time-low {
+            color: #d32f2f; /* Rojo cuando queda poco tiempo */
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Carrera de Multiplicación</h1>
+        <p class="text-xs mb-4">Acierta tantas operaciones como puedas en 60 segundos.</p>
+
+        <!-- Marcador y Temporizador -->
+        <div class="score-box">
+            <span>TIEMPO: <span id="timer">60</span>s</span>
+            <span>ACIERTOS: <span id="correct-count">0</span></span>
+            <span>FALLOS: <span id="incorrect-count">0</span></span>
+        </div>
+        
+        <!-- Área de Pregunta -->
+        <div id="question-area">
+            <span id="num1">?</span> &times; <span id="num2">?</span> = <span class="text-xl">?</span>
+        </div>
+
+        <!-- Área de Respuesta -->
+        <input type="number" id="answer-input" placeholder="INGRESA TU RESPUESTA" disabled>
+
+        <!-- Botón de Acción -->
+        <button id="start-button" class="game-button">EMPEZAR JUEGO</button>
+        
+        <!-- Mensaje de Resultado -->
+        <div id="game-over-message" class="hidden"></div>
+    </div>
+
+    <script>
+        // Elementos del DOM
+        const NUM1_SPAN = document.getElementById('num1');
+        const NUM2_SPAN = document.getElementById('num2');
+        const ANSWER_INPUT = document.getElementById('answer-input');
+        const START_BUTTON = document.getElementById('start-button');
+        const TIMER_SPAN = document.getElementById('timer');
+        const CORRECT_COUNT_SPAN = document.getElementById('correct-count');
+        const INCORRECT_COUNT_SPAN = document.getElementById('incorrect-count');
+        const GAME_OVER_MESSAGE = document.getElementById('game-over-message');
+
+        // Variables del Juego
+        const TIME_LIMIT = 60; // 60 segundos
+        const MAX_MULTIPLIER = 12; // Tablas hasta el 12
+        let timeLeft = TIME_LIMIT;
+        let correctCount = 0;
+        let incorrectCount = 0;
+        let timerInterval;
+        let currentAnswer = 0;
+        let gameActive = false;
+
+        /** Genera un número aleatorio entre 1 y el máximo (12) */
+        function generateRandomNumber() {
+            return Math.floor(Math.random() * MAX_MULTIPLIER) + 1;
+        }
+
+        /** Genera una nueva pregunta y la muestra */
+        function newQuestion() {
+            const num1 = generateRandomNumber();
+            const num2 = generateRandomNumber();
+            currentAnswer = num1 * num2;
+
+            NUM1_SPAN.textContent = num1;
+            NUM2_SPAN.textContent = num2;
+            ANSWER_INPUT.value = '';
+            ANSWER_INPUT.focus();
+        }
+
+        /** Inicia el temporizador del juego */
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                TIMER_SPAN.textContent = timeLeft;
+
+                if (timeLeft <= 10) {
+                    TIMER_SPAN.classList.add('time-low');
+                } else {
+                    TIMER_SPAN.classList.remove('time-low');
+                }
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        /** Finaliza el juego */
+        function endGame() {
+            clearInterval(timerInterval);
+            gameActive = false;
+            ANSWER_INPUT.disabled = true;
+            START_BUTTON.textContent = 'JUGAR DE NUEVO';
+            START_BUTTON.classList.remove('hidden');
+
+            const percentage = (correctCount / (correctCount + incorrectCount)) * 100 || 0;
+            
+            // Mostrar mensaje de fin de juego
+            GAME_OVER_MESSAGE.innerHTML = `
+                ¡TIEMPO AGOTADO!<br>
+                RESPUESTAS CORRECTAS: ${correctCount}<br>
+                RESPUESTAS INCORRECTAS: ${incorrectCount}<br>
+                PRECISIÓN: ${percentage.toFixed(0)}%
+            `;
+            GAME_OVER_MESSAGE.classList.remove('hidden');
+        }
+
+        /** Reinicia el estado del juego */
+        function resetGame() {
+            clearInterval(timerInterval);
+            timeLeft = TIME_LIMIT;
+            correctCount = 0;
+            incorrectCount = 0;
+            gameActive = true;
+            TIMER_SPAN.textContent = TIME_LIMIT;
+            CORRECT_COUNT_SPAN.textContent = 0;
+            INCORRECT_COUNT_SPAN.textContent = 0;
+            TIMER_SPAN.classList.remove('time-low');
+            GAME_OVER_MESSAGE.classList.add('hidden');
+
+            ANSWER_INPUT.disabled = false;
+            START_BUTTON.textContent = 'VERIFICAR (Enter)';
+            
+            // Ocultar el botón si la verificación se hace con Enter
+            // En este caso lo mantendremos para que sirva de ayuda visual y de fallback
+            START_BUTTON.classList.add('hidden'); 
+
+            startTimer();
+            newQuestion();
+        }
+
+        /** Verifica la respuesta del usuario */
+        function checkAnswer() {
+            if (!gameActive) return;
+
+            const userAnswer = parseInt(ANSWER_INPUT.value);
+            
+            if (isNaN(userAnswer)) {
+                // Si el usuario no ingresa nada, no hacemos nada o lo ignoramos.
+                return;
+            }
+
+            if (userAnswer === currentAnswer) {
+                correctCount++;
+                CORRECT_COUNT_SPAN.textContent = correctCount;
+                // Feedback visual rápido
+                ANSWER_INPUT.style.borderColor = '#4caf50'; // Verde
+            } else {
+                incorrectCount++;
+                INCORRECT_COUNT_SPAN.textContent = incorrectCount;
+                // Feedback visual rápido
+                ANSWER_INPUT.style.borderColor = '#f44336'; // Rojo
+            }
+            
+            // Volver al borde gris después de un breve momento
+            setTimeout(() => {
+                ANSWER_INPUT.style.borderColor = '#ccc';
+            }, 150);
+
+            newQuestion();
+        }
+
+        // --- Event Listeners ---
+
+        // Iniciar/Reiniciar el juego al hacer clic
+        START_BUTTON.addEventListener('click', () => {
+            if (!gameActive) {
+                resetGame();
+            } else {
+                // Si el botón está visible, puede usarse como botón de verificación
+                checkAnswer();
+            }
+        });
+
+        // Usar la tecla Enter para verificar la respuesta (principal método de interacción)
+        ANSWER_INPUT.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && gameActive) {
+                checkAnswer();
+            }
+        });
+        
+        // Iniciar el juego en la carga de la página (solo muestra la UI inicial)
+        window.onload = () => {
+            // Configuración inicial de la UI
+            NUM1_SPAN.textContent = generateRandomNumber();
+            NUM2_SPAN.textContent = generateRandomNumber();
+            START_BUTTON.classList.remove('hidden');
+        };
+
+    </script>
+</body>
+</html>
