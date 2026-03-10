@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Desafío Maestro Scratch 2025</title>
+    <style>
+        :root {
+            --movimiento: #4C97FF; --apariencia: #9966FF; --sonido: #CF63CF;
+            --eventos: #FFBF00; --control: #FFAB19; --sensores: #4CBFE6;
+            --operadores: #59C059; --variables: #FF8C1A;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .game-container { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 600px; width: 100%; text-align: center; }
+        .block { padding: 15px; margin: 10px; border-radius: 8px; color: white; font-weight: bold; cursor: grab; font-size: 1.1em; transition: transform 0.2s; border: 2px solid rgba(0,0,0,0.1); }
+        .block:active { cursor: grabbing; transform: scale(0.95); }
+        .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
+        .drop-zone { padding: 15px; border: 2px dashed #ccc; border-radius: 8px; cursor: pointer; background: #fafafa; transition: 0.3s; }
+        .drop-zone:hover { background: #eee; border-color: #666; }
+        #message { margin-top: 20px; font-weight: bold; height: 24px; }
+        .score { font-size: 1.2em; color: #333; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1>🧩 Repaso de Bloques Scratch</h1>
+    <div class="score">Aciertos: <span id="hits">0</span> | Intentos: <span id="attempts">0</span></div>
+    
+    <div id="block-to-guess" class="block" draggable="true">Cargando bloque...</div>
+    
+    <p>¿A qué categoría pertenece este bloque?</p>
+    
+    <div class="options-grid" id="options">
+        <!-- Las opciones se generan dinámicamente -->
+    </div>
+
+    <div id="message"></div>
+    <button onclick="nextQuestion()" style="margin-top:15px; padding:10px 20px; cursor:pointer; display:none;" id="nextBtn">Siguiente Pregunta</button>
+</div>
+
+<script>
+    const database = [
+        { text: "Mover 10 pasos", cat: "Movimiento", color: "var(--movimiento)" },
+        { text: "Decir 'Hola' durante 2 segundos", cat: "Apariencia", color: "var(--apariencia)" },
+        { text: "Al hacer clic en bandera verde", cat: "Eventos", color: "var(--eventos)" },
+        { text: "Por siempre", cat: "Control", color: "var(--control)" },
+        { text: "Tocar sonido 'miau' hasta que termine", cat: "Sonido", color: "var(--sonido)" },
+        { text: "¿Tocando el puntero del ratón?", cat: "Sensores", color: "var(--sensores)" },
+        { text: "unir 'manzana' y 'plátano'", cat: "Operadores", color: "var(--operadores)" },
+        { text: "dar a [mi variable] el valor 0", cat: "Variables", color: "var(--variables)" },
+        { text: "Girar 15 grados", cat: "Movimiento", color: "var(--movimiento)" },
+        { text: "Esperar 1 segundo", cat: "Control", color: "var(--control)" }
+    ];
+
+    let currentIdx = 0;
+    let hits = 0;
+    let attempts = 0;
+
+    function initGame() {
+        const categories = [...new Set(database.map(item => item.cat))];
+        const optionsDiv = document.getElementById('options');
+        categories.forEach(cat => {
+            const div = document.createElement('div');
+            div.className = 'drop-zone';
+            div.innerText = cat;
+            div.onclick = () => checkAnswer(cat);
+            optionsDiv.appendChild(div);
+        });
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        const item = database[currentIdx];
+        const block = document.getElementById('block-to-guess');
+        block.innerText = item.text;
+        block.style.background = "#333"; // Ocultamos el color para que adivinen
+        document.getElementById('message').innerText = "";
+        document.getElementById('nextBtn').style.display = "none";
+    }
+
+    function checkAnswer(selectedCat) {
+        attempts++;
+        const correctCat = database[currentIdx].cat;
+        const msg = document.getElementById('message');
+        
+        if(selectedCat === correctCat) {
+            hits++;
+            msg.innerText = "¡Correcto! 🌟";
+            msg.style.color = "green";
+            document.getElementById('block-to-guess').style.background = database[currentIdx].color;
+            document.getElementById('nextBtn').style.display = "inline-block";
+        } else {
+            msg.innerText = "Inténtalo de nuevo... ❌";
+            msg.style.color = "red";
+        }
+        updateScore();
+    }
+
+    function nextQuestion() {
+        currentIdx = (currentIdx + 1) % database.length;
+        loadQuestion();
+    }
+
+    function updateScore() {
+        document.getElementById('hits').innerText = hits;
+        document.getElementById('attempts').innerText = attempts;
+    }
+
+    initGame();
+</script>
+</body>
+</html>
