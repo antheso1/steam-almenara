@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retro Space Evolution</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Press+Start+2P', cursive;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            pointer-events: none;
+            text-shadow: 2px 2px #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 5;
+        }
+
+        #start-screen, #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 2.5rem;
+            border: 4px solid #0ff;
+            box-shadow: 0 0 30px #0ff;
+            z-index: 100;
+            min-width: 320px;
+        }
+
+        .btn {
+            margin-top: 25px;
+            padding: 18px 35px;
+            background: #ff00ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-family: 'Press+Start+2P', cursive;
+            font-size: 14px;
+            transition: all 0.2s;
+            box-shadow: 6px 6px 0 #00ffff;
+            text-transform: uppercase;
+        }
+
+        .btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 3px 3px 0 #00ffff;
+        }
+
+        #mobile-controls {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+            pointer-events: none;
+            display: none;
+            z-index: 50;
+        }
+
+        .control-btn {
+            width: 85px;
+            height: 85px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            border: 3px solid #0ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            user-select: none;
+            font-size: 32px;
+            color: #0ff;
+            backdrop-filter: blur(5px);
+        }
+
+        .evolution-pop {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            text-shadow: 0 0 10px #0ff, 0 0 20px #ff00ff;
+            font-size: 24px;
+            animation: fadeUp 2s ease-out forwards;
+            pointer-events: none;
+            z-index: 80;
+            width: 100%;
+            text-align: center;
+        }
+
+        @keyframes fadeUp {
+            0% { opacity: 0; transform: translate(-50%, -20%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -180%) scale(1.5); }
+        }
+
+        @media (pointer: coarse) {
+            #mobile-controls { display: flex; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-overlay">
+        <div>
+            <div class="text-pink-500">SCORE: <span id="score" class="text-white">0</span></div>
+            <div class="mt-4 text-[12px] text-cyan-400">LEVEL: <span id="level">1</span></div>
+        </div>
+        <div class="text-right">
+            <div class="text-[12px] text-yellow-400">KILLS: <span id="kills" class="text-white">0</span>/10</div>
+            <div id="size-indicator" class="text-[10px] text-pink-400 mt-2 tracking-tighter">SIZE: 1.0x</div>
+        </div>
+    </div>
+
+    <div id="start-screen">
+        <h1 class="text-2xl mb-8 text-cyan-400 tracking-widest">GALAXY EVOLUTION</h1>
+        <div class="space-y-4 text-[10px] leading-relaxed text-gray-300">
+            <p>LA NAVE CRECE CADA 10 BAJAS</p>
+            <p class="text-green-400">VERDE = RESISTENTE (3 TIROS)</p>
+            <p class="text-yellow-400">AMARILLO = VELOZ</p>
+            <p class="text-red-400">ROJO = ESTÁNDAR</p>
+        </div>
+        <button class="btn" onclick="startGame()">INICIAR COMBATE</button>
+    </div>
+
+    <div id="game-over" class="hidden">
+        <h2 class="text-3xl mb-6 text-red-500">¡DESTRUIDO!</h2>
+        <p class="mb-6 text-xl">SCORE: <span id="final-score" class="text-cyan-400">0</span></p>
+        <button class="btn" onclick="startGame()">REINTENTAR</button>
+    </div>
+
+    <div id="mobile-controls">
+        <div class="flex gap-6">
+            <div class="control-btn" id="btn-left">◀</div>
+            <div class="control-btn" id="btn-right">▶</div>
+        </div>
+        <div class="control-btn" id="btn-shoot" style="background: rgba(255,0,255,0.25); border-color: #f0f; color: #f0f;">🔥</div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const killsEl = document.getElementById('kills');
+        const levelEl = document.getElementById('level');
+        const sizeInd = document.getElementById('size-indicator');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreEl = document.getElementById('final-score');
+
+        let gameActive = false;
+        let score = 0;
+        let killsCount = 0;
+        let level = 1;
+        let player, bullets, enemies, particles, stars;
+        let keys = {};
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (stars) createStars();
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            // Prevent scrolling with arrows/space
+            if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        class Player {
+            constructor() {
+                this.baseW = 40;
+                this.baseH = 40;
+                this.growthFactor = 1.0;
+                this.width = this.baseW;
+                this.height = this.baseH;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height - 140;
+                this.speed = 8.5;
+                this.color = '#00ffff';
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+                
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = this.color;
+
+                // Alas - Diseño más complejo
+                ctx.fillStyle = '#ff00ff';
+                const wW = this.width * 0.5;
+                const wH = this.height * 0.4;
+                ctx.fillRect(-this.width/2 - wW/2, 5, wW, wH);
+                ctx.fillRect(this.width/2 - wW/2, 5, wW, wH);
+                
+                // Detalle alas
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-this.width/2 - wW/2 + 2, 8, 4, 4);
+                ctx.fillRect(this.width/2 + wW/2 - 6, 8, 4, 4);
+
+                // Cuerpo nave
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(0, -this.height/2);
+                ctx.lineTo(this.width/2, this.height/3);
+                ctx.lineTo(this.width/4, this.height/2);
+                ctx.lineTo(-this.width/4, this.height/2);
+                ctx.lineTo(-this.width/2, this.height/3);
+                ctx.closePath();
+                ctx.fill();
+
+                // Cabina reflectante
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(0, -2, this.width/6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Propulsor (Fuego neón)
+                if (gameActive) {
+                    const fH = 15 + Math.random() * 25;
+                    const grad = ctx.createLinearGradient(0, this.height/2, 0, this.height/2 + fH);
+                    grad.addColorStop(0, '#0ff');
+                    grad.addColorStop(0.5, '#f0f');
+                    grad.addColorStop(1, 'transparent');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(-this.width/4, this.height/3, this.width/2, fH);
+                }
+                ctx.restore();
+            }
+
+            update() {
+                if (keys['ArrowLeft'] || keys['KeyA']) this.x -= this.speed;
+                if (keys['ArrowRight'] || keys['KeyD']) this.x += this.speed;
+                
+                if (this.x < 0) this.x = 0;
+                if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
+            }
+
+            evolve() {
+                this.growthFactor += 0.25;
+                level++;
+                const oldW = this.width;
+                this.width = this.baseW * this.growthFactor;
+                this.height = this.baseH * this.growthFactor;
+                this.x -= (this.width - oldW) / 2; // Mantener centro
+                this.speed = Math.max(4.5, 8.5 - (this.growthFactor * 0.6));
+                
+                const msg = document.createElement('div');
+                msg.className = 'evolution-pop';
+                msg.innerText = `LEVEL UP! x${this.growthFactor.toFixed(1)}`;
+                document.body.appendChild(msg);
+                setTimeout(() => msg.remove(), 2000);
+
+                levelEl.innerText = level;
+                sizeInd.innerText = `SIZE: ${this.growthFactor.toFixed(1)}x`;
+            }
+        }
+
+        class Enemy {
+            constructor() {
+                const types = [
+                    { name: 'Scout', hp: 1, speed: 4, size: 30, color: '#ff3333', score: 10, pattern: 'straight' },
+                    { name: 'Heavy', hp: 3, speed: 1.8, size: 65, color: '#33ff33', score: 50, pattern: 'sine' },
+                    { name: 'Interceptor', hp: 1, speed: 6.5, size: 25, color: '#ffff33', score: 25, pattern: 'dash' }
+                ];
+                
+                let type;
+                const r = Math.random();
+                if (level < 2) type = types[0];
+                else if (level < 4) type = r > 0.75 ? types[1] : types[0];
+                else type = r > 0.7 ? types[1] : (r > 0.4 ? types[2] : types[0]);
+
+                this.type = type;
+                this.width = type.size;
+                this.height = type.size;
+                this.x = Math.random() * (canvas.width - this.width);
+                this.y = -this.height - 20;
+                this.hp = type.hp;
+                this.maxHp = type.hp;
+                this.speed = type.speed + (level * 0.2); // Más rápido cada nivel
+                this.baseX = this.x;
+                this.time = Math.random() * 1000;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width/2, this.y + this.height/2);
+                
+                // Efecto de daño si le han disparado
+                const isHit = this.hp < this.maxHp;
+                ctx.fillStyle = isHit && Math.sin(Date.now()/50) > 0 ? '#fff' : this.type.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.type.color;
+
+                if (this.type.name === 'Scout') {
+                    // Nave clásica Galaga
+                    ctx.beginPath();
+                    ctx.moveTo(0, this.height/2);
+                    ctx.lineTo(this.width/2, 0);
+                    ctx.lineTo(this.width/2, -this.height/2);
+                    ctx.lineTo(0, -this.height/4);
+                    ctx.lineTo(-this.width/2, -this.height/2);
+                    ctx.lineTo(-this.width/2, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.type.name === 'Heavy') {
+                    // Nave nodriza blindada (ya no es un cuadrado feo)
+                    ctx.fillRect(-this.width/2, -this.height/4, this.width, this.height/2);
+                    ctx.fillRect(-this.width/4, -this.height/2, this.width/2, this.height);
+                    // Cañones laterales
+                    ctx.fillStyle = '#555';
+                    ctx.fillRect(-this.width/2 - 5, 0, 10, 15);
+                    ctx.fillRect(this.width/2 - 5, 0, 10, 15);
+                    // Núcleo de energía
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.width/6, 0, Math.PI*2);
+                    ctx.fill();
+                } else {
+                    // Interceptor veloz
+                    ctx.beginPath();
+                    ctx.moveTo(0, this.height/2);
+                    ctx.lineTo(this.width/4, -this.height/2);
+                    ctx.lineTo(-this.width/4, -this.height/2);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Alas finas
+                    ctx.fillRect(-this.width/2, -this.height/4, this.width, 4);
+                }
+
+                ctx.restore();
+            }
+
+            update() {
+                this.y += this.speed;
+                if (this.type.pattern === 'sine') {
+                    this.x = this.baseX + Math.sin(this.y / 60 + this.time) * (canvas.width * 0.2);
+                } else if (this.type.pattern === 'dash') {
+                    if (Math.sin(this.y / 25 + this.time) > 0.7) this.y += this.speed * 1.5;
+                }
+                
+                // Mantener en pantalla lateralmente
+                if (this.x < 0) this.x = 0;
+                if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, scale) {
+                this.width = 6 * scale;
+                this.height = 22 * scale;
+                this.x = x - this.width / 2;
+                this.y = y;
+                this.speed = 14;
+            }
+            draw() {
+                ctx.fillStyle = '#fff';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#0ff';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+            update() { this.y -= this.speed; }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color;
+                this.size = Math.random() * 5 + 2;
+                this.vx = (Math.random() - 0.5) * 12;
+                this.vy = (Math.random() - 0.5) * 12;
+                this.life = 1.0;
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.life -= 0.025; }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function createStars() {
+            stars = [];
+            for(let i=0; i<150; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    s: Math.random() * 2.5,
+                    v: Math.random() * 4 + 0.5,
+                    o: Math.random()
+                });
+            }
+        }
+
+        let enemyTimer;
+        function spawnEnemy() {
+            if (!gameActive) return;
+            enemies.push(new Enemy());
+            const nextSpawn = Math.max(250, 1400 - (score/8) - (level * 60));
+            enemyTimer = setTimeout(spawnEnemy, nextSpawn);
+        }
+
+        function startGame() {
+            clearTimeout(enemyTimer);
+            score = 0; killsCount = 0; level = 1;
+            gameActive = true;
+            player = new Player();
+            bullets = []; enemies = []; particles = [];
+            createStars();
+            
+            scoreEl.innerText = score;
+            killsEl.innerText = '0';
+            levelEl.innerText = '1';
+            sizeInd.innerText = 'SIZE: 1.0x';
+            
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            spawnEnemy();
+            requestAnimationFrame(loop);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            finalScoreEl.innerText = score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        let lastShot = 0;
+        function shoot() {
+            const now = Date.now();
+            const cooldown = Math.max(120, 220 - (level * 5));
+            if (now - lastShot > cooldown) {
+                bullets.push(new Bullet(player.x + player.width/2, player.y, player.growthFactor));
+                lastShot = now;
+            }
+        }
+
+        const bL = document.getElementById('btn-left');
+        const bR = document.getElementById('btn-right');
+        const bS = document.getElementById('btn-shoot');
+        bL.ontouchstart = (e) => { e.preventDefault(); keys['ArrowLeft'] = true; };
+        bL.ontouchend = () => keys['ArrowLeft'] = false;
+        bR.ontouchstart = (e) => { e.preventDefault(); keys['ArrowRight'] = true; };
+        bR.ontouchend = () => keys['ArrowRight'] = false;
+        bS.ontouchstart = (e) => { e.preventDefault(); keys['Space'] = true; };
+        bS.ontouchend = () => keys['Space'] = false;
+
+        function loop() {
+            if (!gameActive) return;
+
+            // FONCHO NEGRO PURO (Solución al escenario claro)
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+
+            // Estrellas
+            stars.forEach(s => {
+                ctx.globalAlpha = s.o;
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(s.x, s.y, s.s, s.s);
+                s.y += s.v;
+                if(s.y > canvas.height) {
+                    s.y = -10;
+                    s.x = Math.random() * canvas.width;
+                }
+            });
+            ctx.globalAlpha = 1;
+
+            player.update();
+            player.draw();
+            if (keys['Space'] || keys['KeyK']) shoot();
+
+            bullets.forEach((b, i) => {
+                b.update(); b.draw();
+                if(b.y < -100) bullets.splice(i, 1);
+            });
+
+            particles.forEach((p, i) => {
+                p.update(); p.draw();
+                if(p.life <= 0) particles.splice(i, 1);
+            });
+
+            enemies.forEach((e, ei) => {
+                e.update(); e.draw();
+
+                // Colisión jugador (usando un área un poco más pequeña para ser justos)
+                const pHitX = player.x + player.width * 0.15;
+                const pHitW = player.width * 0.7;
+                if (pHitX < e.x + e.width && pHitX + pHitW > e.x &&
+                    player.y < e.y + e.height && player.y + player.height > e.y) {
+                    gameOver();
+                }
+
+                // Colisión balas
+                bullets.forEach((b, bi) => {
+                    if (b.x < e.x + e.width && b.x + b.width > e.x &&
+                        b.y < e.y + e.height && b.y + b.height > e.y) {
+                        
+                        e.hp--;
+                        bullets.splice(bi, 1);
+                        
+                        // Explosión pequeña por impacto
+                        for(let i=0; i<3; i++) particles.push(new Particle(b.x, b.y, '#fff'));
+                        
+                        if (e.hp <= 0) {
+                            // Gran explosión al morir
+                            for(let i=0; i<20; i++) particles.push(new Particle(e.x + e.width/2, e.y+e.height/2, e.type.color));
+                            enemies.splice(ei, 1);
+                            score += e.type.score;
+                            killsCount++;
+                            
+                            if (killsCount >= 10) {
+                                killsCount = 0;
+                                player.evolve();
+                            }
+                            
+                            scoreEl.innerText = score;
+                            killsEl.innerText = killsCount;
+                        }
+                    }
+                });
+
+                if (e.y > canvas.height + 50) enemies.splice(ei, 1);
+            });
+
+            requestAnimationFrame(loop);
+        }
+    </script>
+</body>
+</html>
