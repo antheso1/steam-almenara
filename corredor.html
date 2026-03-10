@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pastel Road Trip - Selección de Personaje</title>
+    <style>
+        :root {
+            --sky-blue: #d6ebff;
+            --road-gray: #546e7a;
+            --ui-blue: #4a90e2;
+            --ui-blue-dark: #357abd;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--sky-blue);
+            font-family: 'Segoe UI', 'Quicksand', sans-serif;
+            user-select: none;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: white;
+            padding: 12px 24px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            z-index: 10;
+            display: none; /* Se muestra al empezar */
+        }
+
+        .stat-label {
+            color: #1a4a8e;
+            font-weight: bold;
+            font-size: 18px;
+            margin: 0;
+        }
+        .stat-sub {
+            color: #7a9bb5;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Controles visuales */
+        .controls {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            display: none;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-sizing: border-box;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .btn {
+            width: 70px;
+            height: 70px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(74, 144, 226, 0.2);
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .btn svg {
+            width: 35px;
+            height: 35px;
+            fill: var(--ui-blue);
+        }
+
+        /* Pantalla de Inicio / Selección */
+        #menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--sky-blue);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        h1 {
+            color: #4a90e2;
+            font-size: 42px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .selection-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .char-card {
+            background: white;
+            width: 120px;
+            height: 140px;
+            border-radius: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 4px solid transparent;
+        }
+
+        .char-card.selected {
+            border-color: #4a90e2;
+            transform: scale(1.05);
+        }
+
+        .char-emoji {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .char-name {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .start-btn {
+            background: #a5d8ff;
+            color: #1a4a8e;
+            border: none;
+            padding: 18px 60px;
+            font-size: 20px;
+            border-radius: 35px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .start-btn:active { transform: scale(0.98); }
+
+        /* Pantalla de Game Over */
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(214, 235, 255, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 110;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="ui-panel">
+        <p class="stat-label" id="meters">Metros: 0</p>
+        <p class="stat-sub" id="zone-text">Zona: 1/30</p>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="controls" id="game-controls">
+        <div class="btn" id="btn-left">
+            <svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+        </div>
+        <div class="btn" id="btn-right">
+            <svg viewBox="0 0 24 24"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg>
+        </div>
+    </div>
+
+    <!-- Menú Principal -->
+    <div id="menu-overlay">
+        <h1>Pastel Road Trip</h1>
+        <div class="selection-grid">
+            <div class="char-card" onclick="selectChar('dog', this)">
+                <span class="char-emoji">🐶</span>
+                <span class="char-name">Perro</span>
+            </div>
+            <div class="char-card selected" onclick="selectChar('cat', this)">
+                <span class="char-emoji">🐱</span>
+                <span class="char-name">Gato</span>
+            </div>
+            <div class="char-card" onclick="selectChar('giraffe', this)">
+                <span class="char-emoji">🦒</span>
+                <span class="char-name">Jirafa</span>
+            </div>
+            <div class="char-card" onclick="selectChar('rabbit', this)">
+                <span class="char-emoji">🐰</span>
+                <span class="char-name">Conejo</span>
+            </div>
+        </div>
+        <button class="start-btn" onclick="startGame()">Nueva Partida</button>
+    </div>
+
+    <!-- Pantalla de Muerte -->
+    <div id="game-over">
+        <h2 style="color: #1a4a8e; font-size: 32px;">¡Fin del viaje!</h2>
+        <p id="final-stats" style="font-size: 20px; color: #4a90e2; font-weight: bold;"></p>
+        <button class="start-btn" onclick="showMenu()">Volver al Menú</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // UI Elements
+    const metersEl = document.getElementById('meters');
+    const zoneEl = document.getElementById('zone-text');
+    const menuOverlay = document.getElementById('menu-overlay');
+    const gameOverOverlay = document.getElementById('game-over');
+    const finalStatsEl = document.getElementById('final-stats');
+    const uiPanel = document.getElementById('ui-panel');
+    const gameControls = document.getElementById('game-controls');
+
+    let gameActive = false;
+    let score = 0;
+    let zone = 1;
+    
+    // Personaje seleccionado
+    const characters = {
+        dog: '🐶',
+        cat: '🐱',
+        giraffe: '🦒',
+        rabbit: '🐰'
+    };
+    let currentEmoji = characters.cat;
+
+    // Movimiento Preciso
+    let playerX = 0;           
+    let playerVel = 0;         
+    const ACCEL = 0.006;       
+    const FRICTION = 0.82;     
+    const MAX_X = 0.85;        
+    
+    const keys = { left: false, right: false };
+    let obstacles = [];
+    let speed = 0.008;
+    let spawnRate = 0.022;
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Lógica de Selección
+    function selectChar(type, el) {
+        document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        currentEmoji = characters[type];
+    }
+
+    function showMenu() {
+        gameOverOverlay.style.display = 'none';
+        menuOverlay.style.display = 'flex';
+        uiPanel.style.display = 'none';
+        gameControls.style.display = 'none';
+    }
+
+    // Input
+    window.addEventListener('keydown', (e) => {
+        if (e.key === "ArrowLeft") keys.left = true;
+        if (e.key === "ArrowRight") keys.right = true;
+    });
+    window.addEventListener('keyup', (e) => {
+        if (e.key === "ArrowLeft") keys.left = false;
+        if (e.key === "ArrowRight") keys.right = false;
+    });
+
+    const setLeft = (v) => keys.left = v;
+    const setRight = (v) => keys.right = v;
+
+    const bLeft = document.getElementById('btn-left');
+    const bRight = document.getElementById('btn-right');
+    
+    bLeft.onmousedown = () => setLeft(true); bLeft.onmouseup = () => setLeft(false);
+    bLeft.ontouchstart = (e) => { e.preventDefault(); setLeft(true); }; bLeft.ontouchend = () => setLeft(false);
+    
+    bRight.onmousedown = () => setRight(true); bRight.onmouseup = () => setRight(false);
+    bRight.ontouchstart = (e) => { e.preventDefault(); setRight(true); }; bRight.ontouchend = () => setRight(false);
+
+    class Obstacle {
+        constructor() {
+            this.z = 0; 
+            this.laneX = (Math.random() * 1.5) - 0.75;
+            this.color = Math.random() > 0.4 ? "white" : "#ffd54f";
+        }
+        update() { this.z += speed; }
+        draw() {
+            const perspective = Math.pow(this.z, 2);
+            const xBase = canvas.width / 2;
+            const yBase = canvas.height * 0.45;
+            const roadScale = canvas.width * 0.35; 
+            
+            const x = xBase + (this.laneX * roadScale * perspective);
+            const y = yBase + (canvas.height * 0.55 * perspective);
+            const scale = 5 + (85 * perspective);
+
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(x, y, scale / 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            return { x, y, scale };
+        }
+    }
+
+    function drawRoad() {
+        const xBase = canvas.width / 2;
+        const yBase = canvas.height * 0.45;
+        const roadWBottom = canvas.width * 0.45;
+
+        // Carretera
+        ctx.fillStyle = "#546e7a";
+        ctx.beginPath();
+        ctx.moveTo(xBase - 30, yBase);
+        ctx.lineTo(xBase + 30, yBase);
+        ctx.lineTo(xBase + roadWBottom, canvas.height);
+        ctx.lineTo(xBase - roadWBottom, canvas.height);
+        ctx.fill();
+
+        // Línea central punteada
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.setLineDash([20, 30]);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(xBase, yBase); ctx.lineTo(xBase, canvas.height);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    function drawPlayer() {
+        if (keys.left) playerVel -= ACCEL;
+        if (keys.right) playerVel += ACCEL;
+        playerVel *= FRICTION;
+        playerX += playerVel;
+
+        if (playerX < -MAX_X) { playerX = -MAX_X; playerVel = 0; }
+        if (playerX > MAX_X) { playerX = MAX_X; playerVel = 0; }
+
+        const xBase = canvas.width / 2;
+        const yBase = canvas.height * 0.9;
+        const x = xBase + (playerX * canvas.width * 0.35);
+        
+        // Coche azul pastel
+        ctx.fillStyle = "#4a90e2";
+        ctx.beginPath();
+        ctx.roundRect(x - 45, yBase - 25, 90, 50, 15);
+        ctx.fill();
+
+        // Ventana
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.beginPath();
+        ctx.roundRect(x - 38, yBase - 55, 76, 35, 10);
+        ctx.fill();
+
+        // Animalito (Emoji seleccionado)
+        ctx.font = "32px serif";
+        ctx.textAlign = "center";
+        ctx.fillText(currentEmoji, x, yBase - 30);
+
+        return { x, y: yBase - 15, w: 80, h: 45 };
+    }
+
+    function update() {
+        if (!gameActive) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        drawRoad();
+        const player = drawPlayer();
+
+        if (Math.random() < spawnRate) obstacles.push(new Obstacle());
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const obs = obstacles[i];
+            obs.update();
+            const rect = obs.draw();
+
+            if (obs.z > 0.88 && obs.z < 1.02) {
+                const dx = Math.abs(player.x - rect.x);
+                if (dx < (player.w/2 + rect.scale/3)) gameOver();
+            }
+            if (obs.z > 1.2) obstacles.splice(i, 1);
+        }
+
+        score += 0.25;
+        metersEl.innerText = `Metros: ${Math.floor(score)}`;
+        
+        // Cálculo de zona
+        let newZone = Math.floor(score / 200) + 1;
+        if(newZone !== zone) {
+            zone = newZone;
+            zoneEl.innerText = `Zona: ${zone}/30`;
+            speed += 0.0002; // Aumenta dificultad
+        }
+
+        requestAnimationFrame(update);
+    }
+
+    function startGame() {
+        gameActive = true;
+        score = 0;
+        zone = 1;
+        playerX = 0;
+        playerVel = 0;
+        speed = 0.008;
+        obstacles = [];
+        menuOverlay.style.display = 'none';
+        uiPanel.style.display = 'block';
+        gameControls.style.display = 'flex';
+        zoneEl.innerText = `Zona: 1/30`;
+        requestAnimationFrame(update);
+    }
+
+    function gameOver() {
+        gameActive = false;
+        gameOverOverlay.style.display = 'flex';
+        finalStatsEl.innerText = `Recorriste ${Math.floor(score)} metros hasta la Zona ${zone}`;
+        gameControls.style.display = 'none';
+    }
+
+</script>
+</body>
+</html>
