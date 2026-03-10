@@ -1,0 +1,542 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  BookOpen, 
+  Calendar, 
+  CheckCircle, 
+  Clock, 
+  Trophy, 
+  Target, 
+  Plus, 
+  Trash2, 
+  TrendingUp, 
+  Brain, 
+  Star
+} from 'lucide-react';
+
+// Colores de asignaturas para identificación visual rápida
+const subjectColors = {
+  'Matemáticas': 'bg-blue-100 text-blue-700 border-blue-200',
+  'Lengua': 'bg-red-100 text-red-700 border-red-200',
+  'Inglés': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  'Física y Química': 'bg-purple-100 text-purple-700 border-purple-200',
+  'Geografía e Historia': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  'Tecnología': 'bg-gray-100 text-gray-700 border-gray-200',
+  'Educación Física': 'bg-green-100 text-green-700 border-green-200',
+  'Música': 'bg-pink-100 text-pink-700 border-pink-200',
+  'Francés/Alemán': 'bg-orange-100 text-orange-700 border-orange-200',
+  'Valores/Religión': 'bg-teal-100 text-teal-700 border-teal-200',
+};
+
+const INITIAL_SUBJECTS = Object.keys(subjectColors);
+
+export default function EstudioProApp() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  
+  // Estados para datos
+  const [tasks, setTasks] = useState([
+    { id: 1, title: 'Ejercicios Álgebra pág 45', subject: 'Matemáticas', type: 'homework', completed: false, date: '2024-05-20' },
+    { id: 2, title: 'Examen Tema 5: La Materia', subject: 'Física y Química', type: 'exam', completed: false, date: '2024-05-25' },
+    { id: 3, title: 'Redacción: My Holidays', subject: 'Inglés', type: 'homework', completed: true, date: '2024-05-18' },
+  ]);
+
+  const [grades, setGrades] = useState([
+    { id: 1, subject: 'Matemáticas', grade: 9.5, term: 2 },
+    { id: 2, subject: 'Lengua', grade: 8.0, term: 2 },
+    { id: 3, subject: 'Inglés', grade: 10, term: 2 },
+  ]);
+
+  // Gamificación
+  const [xp, setXp] = useState(1250);
+  const [level, setLevel] = useState(3);
+  
+  // Timer Pomodoro
+  const [timerActive, setTimerActive] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutos
+  const [timerMode, setTimerMode] = useState('focus'); // focus | break
+
+  // Efecto para el temporizador
+  useEffect(() => {
+    let interval = null;
+    if (timerActive && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      setTimerActive(false);
+      // Sonido o notificación aquí
+      if (timerMode === 'focus') {
+        setXp(prev => prev + 50); // XP extra por terminar un pomodoro
+        alert("¡Tiempo de estudio completado! +50 XP. Tómate un descanso.");
+        setTimerMode('break');
+        setTimeLeft(5 * 60);
+      } else {
+        alert("Descanso terminado. ¡A por el 10!");
+        setTimerMode('focus');
+        setTimeLeft(25 * 60);
+      }
+    }
+    return () => clearInterval(interval);
+  }, [timerActive, timeLeft, timerMode]);
+
+  // Funciones de utilidad
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const calculateLevel = (currentXp) => Math.floor(currentXp / 500) + 1;
+
+  const toggleTask = (id) => {
+    const newTasks = tasks.map(t => {
+      if (t.id === id) {
+        if (!t.completed) setXp(prev => prev + 20); // +20 XP por tarea
+        else setXp(prev => prev - 20);
+        return { ...t, completed: !t.completed };
+      }
+      return t;
+    });
+    setTasks(newTasks);
+    setLevel(calculateLevel(xp));
+  };
+
+  const addTask = (task) => {
+    setTasks([...tasks, { ...task, id: Date.now(), completed: false }]);
+  };
+
+  const deleteGrade = (id) => {
+    setGrades(grades.filter(g => g.id !== id));
+  };
+
+  const addGrade = (grade) => {
+    setGrades([...grades, { ...grade, id: Date.now() }]);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col md:flex-row">
+      
+      {/* Sidebar de Navegación */}
+      <nav className="bg-indigo-900 text-white md:w-64 w-full flex-shrink-0 flex md:flex-col justify-between p-4 sticky top-0 z-50">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-indigo-500 p-2 rounded-lg">
+            <Brain size={24} className="text-white" />
+          </div>
+          <div>
+            <h1 className="font-bold text-xl leading-none">EstudioPro</h1>
+            <p className="text-xs text-indigo-300">2º ESO Edition</p>
+          </div>
+        </div>
+
+        <div className="flex md:flex-col gap-2 w-full overflow-x-auto md:overflow-visible pb-2 md:pb-0">
+          <NavButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Trophy size={20} />} label="Mi Progreso" />
+          <NavButton active={activeTab === 'agenda'} onClick={() => setActiveTab('agenda')} icon={<Calendar size={20} />} label="Agenda" />
+          <NavButton active={activeTab === 'grades'} onClick={() => setActiveTab('grades')} icon={<TrendingUp size={20} />} label="Notas" />
+          <NavButton active={activeTab === 'focus'} onClick={() => setActiveTab('focus')} icon={<Clock size={20} />} label="Zona de Estudio" />
+        </div>
+
+        <div className="hidden md:block mt-auto bg-indigo-800 p-4 rounded-xl">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-semibold text-indigo-200">Nivel {level}</span>
+            <span className="text-xs bg-indigo-600 px-2 py-1 rounded-full">{xp} XP</span>
+          </div>
+          <div className="w-full bg-indigo-900 rounded-full h-2">
+            <div 
+              className="bg-green-400 h-2 rounded-full transition-all duration-500" 
+              style={{ width: `${(xp % 500) / 5}%` }}
+            ></div>
+          </div>
+          <p className="text-xs text-center mt-2 text-indigo-300">¡Sigue así para el 10!</p>
+        </div>
+      </nav>
+
+      {/* Contenido Principal */}
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+        {activeTab === 'dashboard' && <DashboardView tasks={tasks} grades={grades} xp={xp} level={level} />}
+        {activeTab === 'agenda' && <AgendaView tasks={tasks} onToggle={toggleTask} onAdd={addTask} />}
+        {activeTab === 'grades' && <GradesView grades={grades} onDelete={deleteGrade} onAdd={addGrade} />}
+        {activeTab === 'focus' && (
+          <FocusView 
+            timeLeft={timeLeft} 
+            isActive={timerActive} 
+            mode={timerMode}
+            onToggle={() => setTimerActive(!timerActive)}
+            onReset={() => {
+              setTimerActive(false);
+              setTimeLeft(timerMode === 'focus' ? 25 * 60 : 5 * 60);
+            }}
+          />
+        )}
+      </main>
+    </div>
+  );
+}
+
+// --- Subcomponentes ---
+
+function NavButton({ active, onClick, icon, label }) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl w-full transition-all whitespace-nowrap ${
+        active 
+        ? 'bg-white text-indigo-900 shadow-lg font-bold' 
+        : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function DashboardView({ tasks, grades, xp, level }) {
+  const pendingTasks = tasks.filter(t => !t.completed).length;
+  const nextExam = tasks.filter(t => t.type === 'exam' && !t.completed).sort((a,b) => new Date(a.date) - new Date(b.date))[0];
+  const avgGrade = grades.length > 0 ? (grades.reduce((a, b) => a + b.grade, 0) / grades.length).toFixed(1) : '-';
+
+  return (
+    <div className="space-y-6">
+      <header className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900">¡Hola! Vamos a por el 10.</h2>
+        <p className="text-gray-500">Resumen de tu día en 2º ESO</p>
+      </header>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard title="Nivel Actual" value={level} icon={<Trophy className="text-yellow-500" />} color="bg-yellow-50" />
+        <StatCard title="XP Total" value={xp} icon={<Star className="text-purple-500" />} color="bg-purple-50" />
+        <StatCard title="Tareas Pendientes" value={pendingTasks} icon={<CheckCircle className="text-blue-500" />} color="bg-blue-50" />
+        <StatCard title="Nota Media" value={avgGrade} icon={<Target className="text-green-500" />} color="bg-green-50" />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6 mt-6">
+        {/* Next Exam Widget */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+            <Calendar className="text-red-500" size={20}/> Próximo Gran Reto
+          </h3>
+          {nextExam ? (
+            <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex justify-between items-center">
+              <div>
+                <p className="font-bold text-red-900">{nextExam.subject}</p>
+                <p className="text-red-700">{nextExam.title}</p>
+              </div>
+              <div className="text-center bg-white px-3 py-1 rounded-lg shadow-sm">
+                <p className="text-xs text-gray-500">Fecha</p>
+                <p className="font-bold text-gray-800">{new Date(nextExam.date).toLocaleDateString()}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-400">
+              <p>¡Tranquilo! No hay exámenes a la vista.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Motivational Quote */}
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 rounded-2xl shadow-lg text-white flex flex-col justify-center relative overflow-hidden">
+          <div className="relative z-10">
+            <h3 className="font-bold text-xl mb-2">Consejo del día</h3>
+            <p className="opacity-90 italic">"El éxito es la suma de pequeños esfuerzos repetidos día tras día. ¡Estudia 20 minutos hoy y lo agradecerás mañana!"</p>
+          </div>
+          <Star className="absolute top-[-20px] right-[-20px] text-white opacity-10" size={150} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ title, value, icon, color }) {
+  return (
+    <div className={`${color} p-4 rounded-2xl border border-transparent hover:border-gray-200 transition-all`}>
+      <div className="flex justify-between items-start mb-2">
+        <span className="text-gray-600 font-medium text-sm">{title}</span>
+        {icon}
+      </div>
+      <span className="text-3xl font-bold text-gray-800">{value}</span>
+    </div>
+  );
+}
+
+function AgendaView({ tasks, onToggle, onAdd }) {
+  const [showForm, setShowForm] = useState(false);
+  const [newTask, setNewTask] = useState({ title: '', subject: 'Matemáticas', date: '', type: 'homework' });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!newTask.title || !newTask.date) return;
+    onAdd(newTask);
+    setShowForm(false);
+    setNewTask({ title: '', subject: 'Matemáticas', date: '', type: 'homework' });
+  };
+
+  const sortedTasks = [...tasks].sort((a,b) => new Date(a.date) - new Date(b.date));
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Agenda Escolar</h2>
+        <button 
+          onClick={() => setShowForm(true)}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition"
+        >
+          <Plus size={18} /> Añadir Tarea
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">Nueva Tarea</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">¿Qué hay que hacer?</label>
+                <input 
+                  type="text" 
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="Ej: Ejercicios pág 20..."
+                  value={newTask.title}
+                  onChange={e => setNewTask({...newTask, title: e.target.value})}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Asignatura</label>
+                  <select 
+                    className="w-full p-2 border border-gray-300 rounded-lg"
+                    value={newTask.subject}
+                    onChange={e => setNewTask({...newTask, subject: e.target.value})}
+                  >
+                    {INITIAL_SUBJECTS.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                  <select 
+                    className="w-full p-2 border border-gray-300 rounded-lg"
+                    value={newTask.type}
+                    onChange={e => setNewTask({...newTask, type: e.target.value})}
+                  >
+                    <option value="homework">Deberes</option>
+                    <option value="exam">Examen</option>
+                    <option value="project">Trabajo</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de entrega</label>
+                <input 
+                  type="date" 
+                  className="w-full p-2 border border-gray-300 rounded-lg"
+                  value={newTask.date}
+                  onChange={e => setNewTask({...newTask, date: e.target.value})}
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                <button type="submit" className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-3">
+        {sortedTasks.map(task => (
+          <div 
+            key={task.id} 
+            className={`flex items-center p-4 bg-white rounded-xl shadow-sm border-l-4 transition-all ${
+              task.completed ? 'opacity-60 grayscale' : ''
+            } ${task.type === 'exam' ? 'border-red-500' : 'border-indigo-500'}`}
+          >
+            <button 
+              onClick={() => onToggle(task.id)}
+              className={`p-2 rounded-full mr-4 ${task.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400 hover:bg-green-50'}`}
+            >
+              <CheckCircle size={24} />
+            </button>
+            <div className="flex-1">
+              <div className="flex justify-between items-start">
+                <h4 className={`font-bold text-gray-800 ${task.completed ? 'line-through' : ''}`}>{task.title}</h4>
+                <span className={`text-xs px-2 py-1 rounded-full ${subjectColors[task.subject] || 'bg-gray-100 text-gray-600'}`}>
+                  {task.subject}
+                </span>
+              </div>
+              <div className="flex gap-4 mt-1 text-sm text-gray-500">
+                <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(task.date).toLocaleDateString()}</span>
+                {task.type === 'exam' && <span className="text-red-500 font-bold flex items-center gap-1">⚠️ IMPORTANTE</span>}
+              </div>
+            </div>
+          </div>
+        ))}
+        {sortedTasks.length === 0 && (
+          <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+            <p className="text-gray-500">¡Todo limpio! Tómate un descanso o adelanta materia.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GradesView({ grades, onDelete, onAdd }) {
+  const [newGrade, setNewGrade] = useState({ subject: 'Matemáticas', grade: '', term: 2 });
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    if (!newGrade.grade) return;
+    onAdd({ ...newGrade, grade: parseFloat(newGrade.grade) });
+    setNewGrade({ ...newGrade, grade: '' });
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Mis Notas</h2>
+      
+      {/* Input de notas rápido */}
+      <form onSubmit={handleAdd} className="bg-white p-4 rounded-xl shadow-sm flex flex-col md:flex-row gap-3 items-end">
+        <div className="flex-1 w-full">
+          <label className="text-xs text-gray-500 font-bold uppercase">Asignatura</label>
+          <select 
+            className="w-full p-2 border border-gray-200 rounded-lg"
+            value={newGrade.subject}
+            onChange={e => setNewGrade({...newGrade, subject: e.target.value})}
+          >
+            {INITIAL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="w-full md:w-32">
+          <label className="text-xs text-gray-500 font-bold uppercase">Nota (0-10)</label>
+          <input 
+            type="number" min="0" max="10" step="0.1"
+            className="w-full p-2 border border-gray-200 rounded-lg"
+            placeholder="Ej: 8.5"
+            value={newGrade.grade}
+            onChange={e => setNewGrade({...newGrade, grade: e.target.value})}
+          />
+        </div>
+        <button type="submit" className="w-full md:w-auto bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700">
+          Añadir Nota
+        </button>
+      </form>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {grades.map(g => (
+          <div key={g.id} className="bg-white p-4 rounded-xl shadow-sm relative group overflow-hidden">
+            <div className={`absolute left-0 top-0 bottom-0 w-2 ${
+              g.grade >= 9 ? 'bg-green-500' : g.grade >= 7 ? 'bg-blue-500' : g.grade >= 5 ? 'bg-yellow-500' : 'bg-red-500'
+            }`}></div>
+            <div className="flex justify-between items-start pl-4">
+              <div>
+                <h3 className="font-bold text-gray-800">{g.subject}</h3>
+                <p className="text-xs text-gray-500">2º Trimestre</p>
+              </div>
+              <div className="text-right">
+                <span className="text-2xl font-bold">{g.grade}</span>
+              </div>
+            </div>
+            <button 
+              onClick={() => onDelete(g.id)}
+              className="absolute top-2 right-2 p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
+            >
+              <Trash2 size={16} />
+            </button>
+            <div className="mt-3 pl-4">
+              <div className="w-full bg-gray-100 rounded-full h-1.5">
+                <div 
+                  className={`h-1.5 rounded-full ${g.grade >= 9 ? 'bg-green-500' : 'bg-blue-500'}`} 
+                  style={{ width: `${g.grade * 10}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-right mt-1 text-gray-400">
+                {10 - g.grade <= 0 ? '¡Objetivo cumplido!' : `Faltan ${(10 - g.grade).toFixed(1)} puntos para el 10`}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FocusView({ timeLeft, isActive, mode, onToggle, onReset }) {
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const progress = mode === 'focus' 
+    ? ((25 * 60 - timeLeft) / (25 * 60)) * 100 
+    : ((5 * 60 - timeLeft) / (5 * 60)) * 100;
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full py-10">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-800">
+          {mode === 'focus' ? 'Modo Concentración' : '¡Descanso merecido!'}
+        </h2>
+        <p className="text-gray-500 mt-2">
+          {mode === 'focus' 
+            ? 'Guarda el móvil, abre el libro. 25 minutos a tope.' 
+            : 'Estira las piernas, bebe agua y prepárate.'}
+        </p>
+      </div>
+
+      <div className="relative w-64 h-64 flex items-center justify-center mb-8">
+        {/* Círculo de fondo */}
+        <svg className="absolute w-full h-full transform -rotate-90">
+          <circle
+            cx="128"
+            cy="128"
+            r="120"
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="transparent"
+            className="text-gray-200"
+          />
+          <circle
+            cx="128"
+            cy="128"
+            r="120"
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="transparent"
+            strokeDasharray={2 * Math.PI * 120}
+            strokeDashoffset={2 * Math.PI * 120 * (1 - progress / 100)}
+            className={`transition-all duration-1000 ${mode === 'focus' ? 'text-indigo-600' : 'text-green-500'}`}
+          />
+        </svg>
+        <span className="text-6xl font-mono font-bold text-gray-800 z-10">
+          {formatTime(timeLeft)}
+        </span>
+      </div>
+
+      <div className="flex gap-4">
+        <button 
+          onClick={onToggle}
+          className={`px-8 py-3 rounded-full font-bold text-lg text-white shadow-lg transition transform hover:scale-105 ${
+            isActive ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-indigo-600 hover:bg-indigo-700'
+          }`}
+        >
+          {isActive ? 'Pausar' : 'Empezar'}
+        </button>
+        <button 
+          onClick={onReset}
+          className="px-6 py-3 rounded-full font-bold text-gray-600 bg-gray-200 hover:bg-gray-300 transition"
+        >
+          Reiniciar
+        </button>
+      </div>
+      
+      <div className="mt-12 bg-blue-50 p-4 rounded-xl max-w-lg text-center">
+        <h4 className="font-bold text-blue-900 mb-2 flex items-center justify-center gap-2">
+          <Brain size={18}/> Técnica Pomodoro
+        </h4>
+        <p className="text-sm text-blue-800">
+          El cerebro humano se concentra mejor en intervalos cortos. Estudia intensamente 25 minutos y descansa 5. ¡Así retendrás más información para el examen!
+        </p>
+      </div>
+    </div>
+  );
+}
