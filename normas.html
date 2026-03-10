@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Lista de Tareas Pro</title>
+    <style>
+        /* CSS Integrado */
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --danger-color: #e74c3c;
+            --success-color: #2ecc71;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+        }
+
+        button#add-btn {
+            padding: 10px 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        button#add-btn:hover {
+            background-color: #357abd;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 5px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .task-text {
+            flex-grow: 1;
+            cursor: pointer;
+        }
+
+        .completed .task-text {
+            text-decoration: line-through;
+            color: #888;
+        }
+
+        .delete-btn {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Tareas Pendientes</h1>
+        <div class="input-group">
+            <input type="text" id="task-input" placeholder="¿Qué hay que hacer hoy?">
+            <button id="add-btn">Añadir</button>
+        </div>
+        <ul id="task-list">
+            </ul>
+    </div>
+
+    <script>
+        // JavaScript Integrado
+        const taskInput = document.getElementById('task-input');
+        const addBtn = document.getElementById('add-btn');
+        const taskList = document.getElementById('task-list');
+
+        // Cargar tareas al iniciar
+        document.addEventListener('DOMContentLoaded', getTasks);
+
+        addBtn.addEventListener('click', addTask);
+        
+        // Agregar tarea pulsando Enter
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTask();
+        });
+
+        function addTask() {
+            const taskValue = taskInput.value;
+
+            if (taskValue === '') {
+                alert("Por favor, escribe una tarea");
+                return;
+            }
+
+            const taskObj = {
+                id: Date.now(),
+                text: taskValue,
+                completed: false
+            };
+
+            createTaskElement(taskObj);
+            saveLocalTask(taskObj);
+            
+            taskInput.value = '';
+        }
+
+        function createTaskElement(taskObj) {
+            const li = document.createElement('li');
+            li.setAttribute('data-id', taskObj.id);
+            if (taskObj.completed) li.classList.add('completed');
+
+            li.innerHTML = `
+                <span class="task-text">${taskObj.text}</span>
+                <button class="delete-btn">Eliminar</button>
+            `;
+
+            // Evento para completar
+            li.querySelector('.task-text').addEventListener('click', () => {
+                li.classList.toggle('completed');
+                updateLocalStatus(taskObj.id);
+            });
+
+            // Evento para eliminar
+            li.querySelector('.delete-btn').addEventListener('click', () => {
+                li.remove();
+                removeLocalTask(taskObj.id);
+            });
+
+            taskList.appendChild(li);
+        }
+
+        // --- Persistencia en LocalStorage ---
+
+        function saveLocalTask(task) {
+            let tasks = localStorage.getItem('tasks') ? JSON.parse(localStorage.getItem('tasks')) : [];
+            tasks.push(task);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function getTasks() {
+            let tasks = localStorage.getItem('tasks') ? JSON.parse(localStorage.getItem('tasks')) : [];
+            tasks.forEach(task => createTaskElement(task));
+        }
+
+        function removeLocalTask(id) {
+            let tasks = JSON.parse(localStorage.getItem('tasks'));
+            tasks = tasks.filter(t => t.id !== id);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function updateLocalStatus(id) {
+            let tasks = JSON.parse(localStorage.getItem('tasks'));
+            tasks.forEach(t => {
+                if(t.id === id) t.completed = !t.completed;
+            });
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+    </script>
+</body>
+</html>
