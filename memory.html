@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Eléctrico Normalizado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .header-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .card {
+            perspective: 1000px;
+            aspect-ratio: 1 / 1;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        /* Clase para cuando la carta desaparece */
+        .card.matched {
+            opacity: 0;
+            transform: scale(0.5);
+            pointer-events: none;
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #334155;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-front::after {
+            content: "⚡";
+            font-size: 1.5rem;
+            opacity: 0.2;
+            color: #38bdf8;
+        }
+
+        .card-back {
+            background-color: #ffffff;
+            transform: rotateY(180deg);
+            color: #0f172a;
+            padding: 10%;
+        }
+
+        .glow {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+        }
+
+        .btn-volt {
+            background: linear-gradient(to right, #0284c7, #0369a1);
+            transition: all 0.3s ease;
+        }
+
+        .btn-volt:hover {
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.6);
+            transform: translateY(-2px);
+        }
+
+        svg {
+            width: 80%;
+            height: 80%;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            fill: none;
+        }
+
+        /* Animación de chispas al acertar */
+        @keyframes spark {
+            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+            50% { box-shadow: 0 0 20px 10px rgba(56, 189, 248, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+        }
+
+        .success-spark {
+            animation: spark 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
+
+    <!-- Header -->
+    <header class="text-center mt-6 mb-8">
+        <h1 class="header-font text-3xl md:text-5xl font-bold text-sky-400 glow mb-2">SIMBOLOGÍA MEMORY</h1>
+        <p class="text-slate-400 tracking-widest text-sm uppercase font-bold">Laboratorio de Electricidad</p>
+    </header>
+
+    <!-- Stats -->
+    <div class="flex gap-12 mb-8 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+        <div class="flex flex-col items-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold">Intentos</span>
+            <span id="moves" class="text-2xl text-sky-300 font-bold">0</span>
+        </div>
+        <div class="flex flex-col items-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold">Restantes</span>
+            <span id="matches" class="text-2xl text-emerald-400 font-bold">8</span>
+        </div>
+    </div>
+
+    <!-- Game Board -->
+    <div id="game-board" class="grid grid-cols-4 gap-3 w-full max-w-md mx-auto">
+        <!-- Cards injected by JS -->
+    </div>
+
+    <!-- Controls -->
+    <div class="mt-12 flex flex-col items-center gap-4">
+        <button id="reset-btn" class="btn-volt px-10 py-3 rounded-full font-bold uppercase tracking-widest text-white shadow-lg">
+            Reiniciar Sistema
+        </button>
+        <p class="text-slate-500 text-[10px] text-center max-w-xs uppercase tracking-widest">
+            Simbología Técnica UNE / IEC
+        </p>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl hidden flex items-center justify-center z-50">
+        <div class="bg-slate-900 p-10 rounded-3xl border-2 border-sky-500 text-center shadow-[0_0_50px_rgba(14,165,233,0.3)] max-w-sm mx-4">
+            <div class="mb-6 inline-block p-5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <svg viewBox="0 0 24 24" class="w-16 h-16 stroke-current"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <h2 class="header-font text-3xl text-white mb-2">¡SISTEMA OK!</h2>
+            <p id="final-stats" class="text-slate-400 mb-8"></p>
+            <button onclick="resetGame()" class="btn-volt w-full py-4 rounded-2xl font-bold text-white uppercase tracking-widest hover:scale-105 active:scale-95">
+                Volver a Empezar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const components = [
+            { name: 'Lámpara', svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="25"/><line x1="32" y1="32" x2="68" y2="68"/><line x1="68" y1="32" x2="32" y2="68"/><line x1="0" y1="50" x2="25" y2="50"/><line x1="75" y1="50" x2="100" y2="50"/></svg>' },
+            { name: 'Resistencia', svg: '<svg viewBox="0 0 100 100"><rect x="25" y="40" width="50" height="20"/><line x1="0" y1="50" x2="25" y2="50"/><line x1="75" y1="50" x2="100" y2="50"/></svg>' },
+            { name: 'Interruptor', svg: '<svg viewBox="0 0 100 100"><circle cx="20" cy="50" r="3"/><circle cx="80" cy="50" r="3"/><line x1="23" y1="50" x2="75" y2="25"/><line x1="0" y1="50" x2="17" y2="50"/><line x1="83" y1="50" x2="100" y2="50"/></svg>' },
+            { name: 'Pila', svg: '<svg viewBox="0 0 100 100"><line x1="42" y1="30" x2="42" y2="70"/><line x1="58" y1="42" x2="58" y2="58" stroke-width="5"/><line x1="0" y1="50" x2="42" y2="50"/><line x1="58" y1="50" x2="100" y2="50"/></svg>' },
+            { name: 'Motor', svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30"/><text x="35" y="65" font-family="Arial" font-weight="bold" fill="currentColor" stroke="none" font-size="40">M</text><line x1="0" y1="50" x2="20" y2="50"/><line x1="80" y1="50" x2="100" y2="50"/></svg>' },
+            { name: 'Condensador', svg: '<svg viewBox="0 0 100 100"><line x1="44" y1="30" x2="44" y2="70"/><line x1="56" y1="30" x2="56" y2="70"/><line x1="0" y1="50" x2="44" y2="50"/><line x1="56" y1="50" x2="100" y2="50"/></svg>' },
+            { name: 'Fusible', svg: '<svg viewBox="0 0 100 100"><rect x="25" y="42" width="50" height="16"/><line x1="0" y1="50" x2="100" y2="50"/></svg>' },
+            { name: 'Voltímetro', svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30"/><text x="37" y="65" font-family="Arial" font-weight="bold" fill="currentColor" stroke="none" font-size="40">V</text><line x1="0" y1="50" x2="20" y2="50"/><line x1="80" y1="50" x2="100" y2="50"/></svg>' }
+        ];
+
+        let cards = [];
+        let flippedCards = [];
+        let moves = 0;
+        let matchedPairs = 0;
+        let isLockBoard = false;
+
+        const boardElement = document.getElementById('game-board');
+        const movesElement = document.getElementById('moves');
+        const matchesElement = document.getElementById('matches');
+        const resetBtn = document.getElementById('reset-btn');
+        const modal = document.getElementById('modal');
+        const finalStatsText = document.getElementById('final-stats');
+
+        function initGame() {
+            const deck = [...components, ...components];
+            deck.sort(() => Math.random() - 0.5);
+
+            boardElement.innerHTML = '';
+            cards = [];
+            
+            deck.forEach((item, index) => {
+                const card = createCard(item, index);
+                boardElement.appendChild(card);
+                cards.push(card);
+            });
+
+            moves = 0;
+            matchedPairs = 0;
+            updateStats();
+        }
+
+        function createCard(item, index) {
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.dataset.name = item.name;
+
+            card.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-front"></div>
+                    <div class="card-back">
+                        <div class="w-full h-full flex flex-col items-center justify-center">
+                            ${item.svg}
+                            <span class="text-[9px] font-bold uppercase mt-2 text-slate-500 tracking-tighter">${item.name}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => flipCard(card));
+            return card;
+        }
+
+        function flipCard(card) {
+            if (isLockBoard) return;
+            if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                moves++;
+                updateStats();
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            const isMatch = card1.dataset.name === card2.dataset.name;
+
+            if (isMatch) {
+                // Añadir efecto visual antes de desaparecer
+                card1.querySelector('.card-inner').classList.add('success-spark');
+                card2.querySelector('.card-inner').classList.add('success-spark');
+                
+                setTimeout(() => {
+                    disableCards();
+                }, 600);
+            } else {
+                unflipCards();
+            }
+        }
+
+        function disableCards() {
+            flippedCards.forEach(card => card.classList.add('matched'));
+            matchedPairs++;
+            updateStats();
+            resetTurn();
+
+            if (matchedPairs === components.length) {
+                showVictory();
+            }
+        }
+
+        function unflipCards() {
+            isLockBoard = true;
+            setTimeout(() => {
+                flippedCards.forEach(card => card.classList.remove('flipped'));
+                resetTurn();
+            }, 1000);
+        }
+
+        function resetTurn() {
+            flippedCards = [];
+            isLockBoard = false;
+        }
+
+        function updateStats() {
+            movesElement.innerText = moves;
+            matchesElement.innerText = components.length - matchedPairs;
+        }
+
+        function showVictory() {
+            setTimeout(() => {
+                finalStatsText.innerText = `Has completado el entrenamiento en ${moves} movimientos. Circuito cerrado con éxito.`;
+                modal.classList.remove('hidden');
+            }, 700);
+        }
+
+        function resetGame() {
+            modal.classList.add('hidden');
+            initGame();
+        }
+
+        resetBtn.addEventListener('click', resetGame);
+        window.onload = initGame;
+    </script>
+</body>
+</html>
