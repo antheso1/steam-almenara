@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metal Racing 2.0 - Taller de Tecnología</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #05070A;
+            color: #E2E8F0;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            font-style: italic;
+            color: #FFD700;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .column-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .column {
+            background-color: #0F172A;
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid #1E293B;
+        }
+
+        .material-card {
+            background-color: #1E293B;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            position: relative;
+        }
+
+        .material-card:hover {
+            background-color: #334155;
+            transform: translateY(-2px);
+        }
+
+        .material-card.selected {
+            border-color: #38BDF8;
+            background-color: #0F172A;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+        }
+
+        .symbol {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #0F172A;
+            color: #38BDF8;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        /* --- PISTA DE CARRERAS --- */
+        #track-container {
+            display: none;
+            margin-top: 30px;
+            background: #0F172A;
+            border-radius: 24px;
+            padding: 40px 20px;
+            border: 1px solid #1E293B;
+            position: relative;
+        }
+
+        .lane {
+            height: 120px;
+            background: #0a0d14;
+            margin: 15px 0;
+            border-radius: 16px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            border-bottom: 2px dashed #1e293b;
+        }
+
+        .lane-label {
+            position: absolute;
+            right: 60px;
+            font-size: 3rem;
+            font-weight: 900;
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.03);
+            text-transform: uppercase;
+            user-select: none;
+        }
+
+        .car-sprite {
+            position: absolute;
+            left: 20px;
+            width: 120px;
+            height: auto;
+            z-index: 10;
+            transition: left 3.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .finish-line {
+            position: absolute;
+            right: 40px;
+            top: 0;
+            bottom: 0;
+            width: 20px;
+            background: repeating-linear-gradient(
+                0deg,
+                #fff,
+                #fff 10px,
+                #000 10px,
+                #000 20px
+            );
+            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+
+        /* --- BOTÓN --- */
+        .action-btn {
+            width: 100%;
+            background-color: #1E293B;
+            color: #475569;
+            font-weight: 900;
+            font-size: 1.5rem;
+            padding: 22px;
+            border-radius: 18px;
+            margin-top: 30px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+            cursor: not-allowed;
+            border: 2px solid transparent;
+            display: block;
+        }
+
+        .action-btn.ready {
+            background: linear-gradient(180deg, #38BDF8 0%, #0EA5E9 100%);
+            color: #05070A;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #0369a1, 0 12px 24px rgba(14, 165, 233, 0.4);
+            transform: translateY(-4px);
+            border: none;
+        }
+
+        .action-btn.ready:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #0369a1;
+        }
+
+        /* Modal */
+        #result-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .win-glow {
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.2);
+            border: 2px solid #FFD700 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mx-auto px-4 py-10 max-w-6xl">
+        <header class="header mb-8">
+            <div class="flex justify-between items-center">
+                <h1>METAL RACING 2.0</h1>
+                <div class="flex gap-2">
+                    <div id="status-light" class="w-4 h-4 rounded-full bg-red-500 animate-pulse"></div>
+                    <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
+                    <div class="w-4 h-4 rounded-full bg-green-500"></div>
+                </div>
+            </div>
+            <p class="text-gray-400 text-base mt-2 flex items-center gap-2">
+                <span class="text-yellow-400">💡</span> Objetivo: Aluminio (Chasis), Titanio (Motor) y Cobre (Cables).
+            </p>
+        </header>
+
+        <div id="setup-view">
+            <div class="column-container">
+                <!-- Chasis -->
+                <div class="column">
+                    <div class="text-sky-400 font-black mb-4 uppercase tracking-wider">Chasis</div>
+                    <div class="material-card" onclick="select('chasis', 'acero', this)">
+                        <h3 class="font-bold">Acero</h3>
+                        <p class="text-xs text-gray-400">Muy denso.</p>
+                        <span class="symbol">Fe+C</span>
+                    </div>
+                    <div class="material-card" onclick="select('chasis', 'aluminio', this)">
+                        <h3 class="font-bold">Aluminio</h3>
+                        <p class="text-xs text-gray-400">Ligero y resistente.</p>
+                        <span class="symbol">Al</span>
+                    </div>
+                    <div class="material-card" onclick="select('chasis', 'plomo', this)">
+                        <h3 class="font-bold">Plomo</h3>
+                        <p class="text-xs text-gray-400">Extremadamente pesado.</p>
+                        <span class="symbol">Pb</span>
+                    </div>
+                </div>
+
+                <!-- Motor -->
+                <div class="column">
+                    <div class="text-sky-400 font-black mb-4 uppercase tracking-wider">Motor</div>
+                    <div class="material-card" onclick="select('motor', 'hierro', this)">
+                        <h3 class="font-bold">Hierro</h3>
+                        <p class="text-xs text-gray-400">Se oxida y pesa.</p>
+                        <span class="symbol">Fe</span>
+                    </div>
+                    <div class="material-card" onclick="select('motor', 'titanio', this)">
+                        <h3 class="font-bold">Titanio</h3>
+                        <p class="text-xs text-gray-400">Aguanta el calor.</p>
+                        <span class="symbol">Ti</span>
+                    </div>
+                    <div class="material-card" onclick="select('motor', 'estaño', this)">
+                        <h3 class="font-bold">Estaño</h3>
+                        <p class="text-xs text-gray-400">Se funde a 232°C.</p>
+                        <span class="symbol">Sn</span>
+                    </div>
+                </div>
+
+                <!-- Cables -->
+                <div class="column">
+                    <div class="text-sky-400 font-black mb-4 uppercase tracking-wider">Cables</div>
+                    <div class="material-card" onclick="select('cables', 'cobre', this)">
+                        <h3 class="font-bold">Cobre</h3>
+                        <p class="text-xs text-gray-400">Excelente conductor.</p>
+                        <span class="symbol">Cu</span>
+                    </div>
+                    <div class="material-card" onclick="select('cables', 'oro', this)">
+                        <h3 class="font-bold">Oro</h3>
+                        <p class="text-xs text-gray-400">Demasiado denso/caro.</p>
+                        <span class="symbol">Au</span>
+                    </div>
+                    <div class="material-card" onclick="select('cables', 'azufre', this)">
+                        <h3 class="font-bold">Azufre</h3>
+                        <p class="text-xs text-gray-400">Es un aislante.</p>
+                        <span class="symbol">S</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="race-btn" class="action-btn" disabled onclick="startRace()">¡A LA PISTA!</button>
+        </div>
+
+        <div id="track-container">
+            <div class="lane">
+                <div class="lane-label">TU COCHE</div>
+                <div class="finish-line"></div>
+                <svg id="car-player" class="car-sprite" viewBox="0 0 100 40">
+                    <path fill="#4ade80" d="M10,30 L90,30 L85,15 L60,10 L30,10 L15,20 Z" />
+                    <circle cx="25" cy="32" r="6" fill="#111" />
+                    <circle cx="75" cy="32" r="6" fill="#111" />
+                </svg>
+            </div>
+            <div class="lane">
+                <div class="lane-label">RIVAL</div>
+                <div class="finish-line"></div>
+                <svg id="car-rival" class="car-sprite" viewBox="0 0 100 40">
+                    <path fill="#475569" d="M10,30 L90,30 L85,15 L60,10 L30,10 L15,20 Z" />
+                    <circle cx="25" cy="32" r="6" fill="#111" />
+                    <circle cx="75" cy="32" r="6" fill="#111" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Resultados -->
+    <div id="result-modal">
+        <div id="modal-box" class="bg-[#0F172A] p-10 rounded-[40px] border-2 border-[#1E293B] max-w-md w-full mx-4 text-center transition-all duration-500">
+            <div id="win-icon" class="hidden mb-4 text-6xl text-yellow-400">🏆</div>
+            <h2 id="res-title" class="text-5xl font-black italic mb-4 uppercase tracking-tighter"></h2>
+            <p id="res-desc" class="text-gray-400 text-lg mb-8"></p>
+            
+            <!-- Botón de reintento estándar (para derrotas) -->
+            <button id="retry-btn" class="bg-[#38BDF8] text-black w-full py-5 rounded-2xl font-black text-2xl mb-4" onclick="resetGame()">REINTENTAR</button>
+            
+            <!-- Contenedor especial de victoria -->
+            <div id="win-options" class="hidden flex flex-col gap-4">
+                <div class="text-yellow-400 font-bold text-xl animate-pulse">¡LO HAS CLAVADO!</div>
+                <button class="text-gray-400 hover:text-white underline text-sm mt-2 transition-colors" onclick="resetGame()">
+                    ¿Quieres probar otros materiales para ver cómo de rápido o lento va el coche?
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let config = { chasis: null, motor: null, cables: null };
+
+        function select(type, val, el) {
+            el.parentElement.querySelectorAll('.material-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            config[type] = val;
+            
+            const btn = document.getElementById('race-btn');
+            if(config.chasis && config.motor && config.cables) {
+                btn.disabled = false;
+                btn.classList.add('ready');
+                document.getElementById('status-light').classList.replace('bg-red-500', 'bg-green-500');
+            }
+        }
+
+        function startRace() {
+            document.getElementById('setup-view').style.display = 'none';
+            document.getElementById('track-container').style.display = 'block';
+            
+            const player = document.getElementById('car-player');
+            const rival = document.getElementById('car-rival');
+
+            const isWinner = (config.chasis === 'aluminio' && config.motor === 'titanio' && config.cables === 'cobre');
+            const isTotalFail = (config.motor === 'estaño' || config.cables === 'azufre');
+
+            setTimeout(() => {
+                rival.style.left = 'calc(100% - 160px)';
+                
+                if (isTotalFail) {
+                    player.style.left = '80px';
+                } else if (isWinner) {
+                    player.style.left = 'calc(100% - 130px)';
+                } else {
+                    // Si no es el óptimo, se queda atrás proporcionalmente al error
+                    player.style.left = '55%';
+                }
+
+                setTimeout(() => showResult(isWinner), 3800);
+            }, 50);
+        }
+
+        function showResult(win) {
+            const modal = document.getElementById('result-modal');
+            const modalBox = document.getElementById('modal-box');
+            const title = document.getElementById('res-title');
+            const desc = document.getElementById('res-desc');
+            const retryBtn = document.getElementById('retry-btn');
+            const winIcon = document.getElementById('win-icon');
+            const winOptions = document.getElementById('win-options');
+
+            // Reset del estado visual
+            modalBox.classList.remove('win-glow');
+            winIcon.classList.add('hidden');
+            winOptions.classList.add('hidden');
+            retryBtn.classList.remove('hidden');
+
+            if (win) {
+                title.innerText = "¡ENHORABUENA!";
+                title.style.color = "#FFD700";
+                desc.innerText = "¡Excelente elección! Has demostrado ser un gran ingeniero. El Aluminio, el Titanio y el Cobre forman el equipo imbatible.";
+                
+                modalBox.classList.add('win-glow');
+                winIcon.classList.remove('hidden');
+                winOptions.classList.remove('hidden');
+                retryBtn.classList.add('hidden'); // Ocultamos el botón principal de reintento
+            } else if (config.cables === 'azufre') {
+                title.innerText = "Sin Energía";
+                title.style.color = "#ef4444";
+                desc.innerText = "El Azufre es un no-metal aislante. Tu coche ni siquiera se ha movido.";
+            } else if (config.motor === 'estaño') {
+                title.innerText = "Avería Grave";
+                title.style.color = "#f97316";
+                desc.innerText = "El motor de Estaño se ha derretido por el calor de la competición.";
+            } else if (config.cables === 'oro') {
+                title.innerText = "Demasiado Lento";
+                title.style.color = "#94a3b8";
+                desc.innerText = "Aunque el oro conduce bien, es demasiado denso y pesado para este diseño. ¡El cobre era mejor!";
+            } else {
+                title.innerText = "Derrota";
+                title.style.color = "#94a3b8";
+                desc.innerText = "Materiales inadecuados. El peso del plomo o el acero te han impedido ganar.";
+            }
+            modal.style.display = 'flex';
+        }
+
+        function resetGame() {
+            config = { chasis: null, motor: null, cables: null };
+            document.getElementById('result-modal').style.display = 'none';
+            document.getElementById('track-container').style.display = 'none';
+            document.getElementById('setup-view').style.display = 'block';
+            const btn = document.getElementById('race-btn');
+            btn.disabled = true;
+            btn.classList.remove('ready');
+            document.getElementById('status-light').classList.replace('bg-green-500', 'bg-red-500');
+            document.querySelectorAll('.material-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById('car-player').style.left = '20px';
+            document.getElementById('car-rival').style.left = '20px';
+        }
+    </script>
+</body>
+</html>
