@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabla Periódica Completa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .main-wrapper {
+            width: 100%;
+            max-width: 1300px;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+
+        .periodic-table {
+            display: grid;
+            /* Forzamos 18 columnas iguales sin importar el contenido */
+            grid-template-columns: repeat(18, minmax(0, 1fr));
+            gap: 4px;
+            margin-top: 20px;
+        }
+
+        .element {
+            aspect-ratio: 1 / 1;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            border: 1px solid rgba(0,0,0,0.05);
+            overflow: hidden; /* Evita que el texto deforme la caja */
+        }
+
+        .element:hover {
+            transform: scale(1.4);
+            z-index: 50;
+            box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+            border-radius: 8px;
+        }
+
+        .symbol {
+            font-size: clamp(0.7rem, 1.2vw, 1.1rem);
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .name {
+            font-size: clamp(0.4rem, 0.6vw, 0.55rem);
+            font-weight: 600;
+            margin-top: 2px;
+            text-align: center;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; /* Pone puntos suspensivos si el nombre es gigante */
+            padding: 0 2px;
+        }
+
+        /* Colores */
+        .hidrogeno { background-color: #6366f1; color: white; }
+        .gas-noble { background-color: #0ea5e9; color: white; }
+        .alcalino { background-color: #ef4444; color: white; }
+        .alcalinoterreo { background-color: #facc15; color: #854d0e; }
+        .metal-transicion { background-color: #3b82f6; color: white; }
+        .metal-pobre { background-color: #4ade80; color: #064e3b; }
+        .metaloide { background-color: #2dd4bf; color: white; }
+        .no-metal { background-color: #818cf8; color: white; }
+        .halogeno { background-color: #a78bfa; color: white; }
+        .lantanido { background-color: #fb923c; color: white; }
+        .actinido { background-color: #f472b6; color: white; }
+        .placeholder { background-color: #fdba74; color: white; font-weight: bold; font-size: 0.6rem; }
+        .placeholder-actinido { background-color: #f9a8d4; color: white; font-weight: bold; font-size: 0.6rem; }
+
+        .f-block-title {
+            grid-column: 1 / span 18;
+            height: 50px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Modal */
+        #modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="flex flex-col md:flex-row justify-between items-end mb-6">
+        <div class="text-left">
+            <h1 class="text-3xl font-black text-slate-800 tracking-tight">TABLA PERIÓDICA</h1>
+            <p class="text-slate-500 font-medium">Interactiva y Completa (1-118)</p>
+        </div>
+        <div class="text-right text-xs text-slate-400 font-bold uppercase tracking-widest">
+            Química General
+        </div>
+    </div>
+
+    <div class="periodic-table" id="table"></div>
+</div>
+
+<div id="modal" onclick="closeModal()">
+    <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full mx-4 transform transition-all" onclick="event.stopPropagation()">
+        <div class="flex items-center mb-6">
+            <div id="m-sym" class="text-7xl font-black mr-6 text-slate-800 leading-none"></div>
+            <div>
+                <h2 id="m-name" class="text-3xl font-bold text-slate-800 leading-tight"></h2>
+                <p class="text-slate-400 font-bold tracking-wide">NÚMERO <span id="m-num" class="text-slate-800"></span></p>
+            </div>
+        </div>
+        <div class="space-y-4 border-t border-slate-100 pt-6">
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500 font-bold text-sm">Categoría</span>
+                <span id="m-cat" class="px-3 py-1 bg-slate-100 rounded-full text-xs font-black uppercase text-slate-600"></span>
+            </div>
+            <div class="bg-indigo-50 p-5 rounded-2xl">
+                <h3 class="text-indigo-700 font-black text-xs uppercase mb-3 tracking-widest">Propiedades Químicas</h3>
+                <ul id="m-links" class="text-sm text-indigo-900 space-y-2 opacity-80">
+                    <li class="flex items-start">
+                        <span class="mr-2">•</span>
+                        <span>Configuración electrónica estable en condiciones normales.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="mr-2">•</span>
+                        <span>Capacidad de formación de enlaces covalentes y iónicos.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <button onclick="closeModal()" class="mt-8 w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl font-bold transition-all shadow-lg">Cerrar Detalle</button>
+    </div>
+</div>
+
+<script>
+const elements = [
+    {n:1, s:"H", name:"Hidrógeno", cat:"hidrogeno", x:1, y:1},
+    {n:2, s:"He", name:"Helio", cat:"gas-noble", x:18, y:1},
+    {n:3, s:"Li", name:"Litio", cat:"alcalino", x:1, y:2},
+    {n:4, s:"Be", name:"Berilio", cat:"alcalinoterreo", x:2, y:2},
+    {n:5, s:"B", name:"Boro", cat:"metaloide", x:13, y:2},
+    {n:6, s:"C", name:"Carbono", cat:"no-metal", x:14, y:2},
+    {n:7, s:"N", name:"Nitrógeno", cat:"no-metal", x:15, y:2},
+    {n:8, s:"O", name:"Oxígeno", cat:"no-metal", x:16, y:2},
+    {n:9, s:"F", name:"Flúor", cat:"halogeno", x:17, y:2},
+    {n:10, s:"Ne", name:"Neón", cat:"gas-noble", x:18, y:2},
+    {n:11, s:"Na", name:"Sodio", cat:"alcalino", x:1, y:3},
+    {n:12, s:"Mg", name:"Magnesio", cat:"alcalinoterreo", x:2, y:3},
+    {n:13, s:"Al", name:"Aluminio", cat:"metal-pobre", x:13, y:3},
+    {n:14, s:"Si", name:"Silicio", cat:"metaloide", x:14, y:3},
+    {n:15, s:"P", name:"Fósforo", cat:"no-metal", x:15, y:3},
+    {n:16, s:"S", name:"Azufre", cat:"no-metal", x:16, y:3},
+    {n:17, s:"Cl", name:"Cloro", cat:"halogeno", x:17, y:3},
+    {n:18, s:"Ar", name:"Argón", cat:"gas-noble", x:18, y:3},
+    {n:19, s:"K", name:"Potasio", cat:"alcalino", x:1, y:4},
+    {n:20, s:"Ca", name:"Calcio", cat:"alcalinoterreo", x:2, y:4},
+    {n:21, s:"Sc", name:"Escandio", cat:"metal-transicion", x:3, y:4},
+    {n:22, s:"Ti", name:"Titanio", cat:"metal-transicion", x:4, y:4},
+    {n:23, s:"V", name:"Vanadio", cat:"metal-transicion", x:5, y:4},
+    {n:24, s:"Cr", name:"Cromo", cat:"metal-transicion", x:6, y:4},
+    {n:25, s:"Mn", name:"Manganeso", cat:"metal-transicion", x:7, y:4},
+    {n:26, s:"Fe", name:"Hierro", cat:"metal-transicion", x:8, y:4},
+    {n:27, s:"Co", name:"Cobalto", cat:"metal-transicion", x:9, y:4},
+    {n:28, s:"Ni", name:"Níquel", cat:"metal-transicion", x:10, y:4},
+    {n:29, s:"Cu", name:"Cobre", cat:"metal-transicion", x:11, y:4},
+    {n:30, s:"Zn", name:"Zinc", cat:"metal-transicion", x:12, y:4},
+    {n:31, s:"Ga", name:"Galio", cat:"metal-pobre", x:13, y:4},
+    {n:32, s:"Ge", name:"Germanio", cat:"metaloide", x:14, y:4},
+    {n:33, s:"As", name:"Arsénico", cat:"metaloide", x:15, y:4},
+    {n:34, s:"Se", name:"Selenio", cat:"no-metal", x:16, y:4},
+    {n:35, s:"Br", name:"Bromo", cat:"halogeno", x:17, y:4},
+    {n:36, s:"Kr", name:"Kriptón", cat:"gas-noble", x:18, y:4},
+    {n:37, s:"Rb", name:"Rubidio", cat:"alcalino", x:1, y:5},
+    {n:38, s:"Sr", name:"Estroncio", cat:"alcalinoterreo", x:2, y:5},
+    {n:39, s:"Y", name:"Itrio", cat:"metal-transicion", x:3, y:5},
+    {n:40, s:"Zr", name:"Zirconio", cat:"metal-transicion", x:4, y:5},
+    {n:41, s:"Nb", name:"Niobio", cat:"metal-transicion", x:5, y:5},
+    {n:42, s:"Mo", name:"Molibdeno", cat:"metal-transicion", x:6, y:5},
+    {n:43, s:"Tc", name:"Tecnecio", cat:"metal-transicion", x:7, y:5},
+    {n:44, s:"Ru", name:"Rutenio", cat:"metal-transicion", x:8, y:5},
+    {n:45, s:"Rh", name:"Rodio", cat:"metal-transicion", x:9, y:5},
+    {n:46, s:"Pd", name:"Paladio", cat:"metal-transicion", x:10, y:5},
+    {n:47, s:"Ag", name:"Plata", cat:"metal-transicion", x:11, y:5},
+    {n:48, s:"Cd", name:"Cadmio", cat:"metal-transicion", x:12, y:5},
+    {n:49, s:"In", name:"Indio", cat:"metal-pobre", x:13, y:5},
+    {n:50, s:"Sn", name:"Estaño", cat:"metal-pobre", x:14, y:5},
+    {n:51, s:"Sb", name:"Antimonio", cat:"metaloide", x:15, y:5},
+    {n:52, s:"Te", name:"Telurio", cat:"metaloide", x:16, y:5},
+    {n:53, s:"I", name:"Yodo", cat:"halogeno", x:17, y:5},
+    {n:54, s:"Xe", name:"Xenón", cat:"gas-noble", x:18, y:5},
+    {n:55, s:"Cs", name:"Cesio", cat:"alcalino", x:1, y:6},
+    {n:56, s:"Ba", name:"Bario", cat:"alcalinoterreo", x:2, y:6},
+    {n:"57-71", s:"La-Lu", name:"Lantánidos", cat:"placeholder", x:3, y:6},
+    {n:72, s:"Hf", name:"Hafnio", cat:"metal-transicion", x:4, y:6},
+    {n:73, s:"Ta", name:"Tantalio", cat:"metal-transicion", x:5, y:6},
+    {n:74, s:"W", name:"Wolframio", cat:"metal-transicion", x:6, y:6},
+    {n:75, s:"Re", name:"Renio", cat:"metal-transicion", x:7, y:6},
+    {n:76, s:"Os", name:"Osmio", cat:"metal-transicion", x:8, y:6},
+    {n:77, s:"Ir", name:"Iridio", cat:"metal-transicion", x:9, y:6},
+    {n:78, s:"Pt", name:"Platino", cat:"metal-transicion", x:10, y:6},
+    {n:79, s:"Au", name:"Oro", cat:"metal-transicion", x:11, y:6},
+    {n:80, s:"Hg", name:"Mercurio", cat:"metal-transicion", x:12, y:6},
+    {n:81, s:"Tl", name:"Talio", cat:"metal-pobre", x:13, y:6},
+    {n:82, s:"Pb", name:"Plomo", cat:"metal-pobre", x:14, y:6},
+    {n:83, s:"Bi", name:"Bismuto", cat:"metal-pobre", x:15, y:6},
+    {n:84, s:"Po", name:"Polonio", cat:"metaloide", x:16, y:6},
+    {n:85, s:"At", name:"Astato", cat:"halogeno", x:17, y:6},
+    {n:86, s:"Rn", name:"Radón", cat:"gas-noble", x:18, y:6},
+    {n:87, s:"Fr", name:"Francio", cat:"alcalino", x:1, y:7},
+    {n:88, s:"Ra", name:"Radio", cat:"alcalinoterreo", x:2, y:7},
+    {n:"89-103", s:"Ac-Lr", name:"Actínidos", cat:"placeholder-actinido", x:3, y:7},
+    {n:104, s:"Rf", name:"Rutherfordio", cat:"metal-transicion", x:4, y:7},
+    {n:105, s:"Db", name:"Dubnio", cat:"metal-transicion", x:5, y:7},
+    {n:106, s:"Sg", name:"Seaborgio", cat:"metal-transicion", x:6, y:7},
+    {n:107, s:"Bh", name:"Bohrio", cat:"metal-transicion", x:7, y:7},
+    {n:108, s:"Hs", name:"Hassio", cat:"metal-transicion", x:8, y:7},
+    {n:109, s:"Mt", name:"Meitnerio", cat:"metal-transicion", x:9, y:7},
+    {n:110, s:"Ds", name:"Darmstaditio", cat:"metal-transicion", x:10, y:7},
+    {n:111, s:"Rg", name:"Roentgenio", cat:"metal-transicion", x:11, y:7},
+    {n:112, s:"Cn", name:"Copernicio", cat:"metal-transicion", x:12, y:7},
+    {n:113, s:"Nh", name:"Nihonio", cat:"metal-pobre", x:13, y:7},
+    {n:114, s:"Fl", name:"Flerovio", cat:"metal-pobre", x:14, y:7},
+    {n:115, s:"Mc", name:"Moscovio", cat:"metal-pobre", x:15, y:7},
+    {n:116, s:"Lv", name:"Livermorio", cat:"metal-pobre", x:16, y:7},
+    {n:117, s:"Ts", name:"Teneso", cat:"halogeno", x:17, y:7},
+    {n:118, s:"Og", name:"Oganesón", cat:"gas-noble", x:18, y:7},
+
+    // BLOQUE F
+    {n:57, s:"La", name:"Lantano", cat:"lantanido", x:4, y:9},
+    {n:58, s:"Ce", name:"Cerio", cat:"lantanido", x:5, y:9},
+    {n:59, s:"Pr", name:"Praseodimio", cat:"lantanido", x:6, y:9},
+    {n:60, s:"Nd", name:"Neodimio", cat:"lantanido", x:7, y:9},
+    {n:61, s:"Pm", name:"Prometio", cat:"lantanido", x:8, y:9},
+    {n:62, s:"Sm", name:"Samario", cat:"lantanido", x:9, y:9},
+    {n:63, s:"Eu", name:"Europio", cat:"lantanido", x:10, y:9},
+    {n:64, s:"Gd", name:"Gadolinio", cat:"lantanido", x:11, y:9},
+    {n:65, s:"Tb", name:"Terbio", cat:"lantanido", x:12, y:9},
+    {n:66, s:"Dy", name:"Disprosio", cat:"lantanido", x:13, y:9},
+    {n:67, s:"Ho", name:"Holmio", cat:"lantanido", x:14, y:9},
+    {n:68, s:"Er", name:"Erbio", cat:"lantanido", x:15, y:9},
+    {n:69, s:"Tm", name:"Tulio", cat:"lantanido", x:16, y:9},
+    {n:70, s:"Yb", name:"Iterbio", cat:"lantanido", x:17, y:9},
+    {n:71, s:"Lu", name:"Lutecio", cat:"lantanido", x:18, y:9},
+
+    {n:89, s:"Ac", name:"Actinio", cat:"actinido", x:4, y:10},
+    {n:90, s:"Th", name:"Torio", cat:"actinido", x:5, y:10},
+    {n:91, s:"Pa", name:"Protactinio", cat:"actinido", x:6, y:10},
+    {n:92, s:"U", name:"Uranio", cat:"actinido", x:7, y:10},
+    {n:93, s:"Np", name:"Neptunio", cat:"actinido", x:8, y:10},
+    {n:94, s:"Pu", name:"Plutonio", cat:"actinido", x:9, y:10},
+    {n:95, s:"Am", name:"Americio", cat:"actinido", x:10, y:10},
+    {n:96, s:"Cm", name:"Curio", cat:"actinido", x:11, y:10},
+    {n:97, s:"Bk", name:"Berkelio", cat:"actinido", x:12, y:10},
+    {n:98, s:"Cf", name:"Californio", cat:"actinido", x:13, y:10},
+    {n:99, s:"Es", name:"Einstenio", cat:"actinido", x:14, y:10},
+    {n:100, s:"Fm", name:"Fermio", cat:"actinido", x:15, y:10},
+    {n:101, s:"Md", name:"Mendelevio", cat:"actinido", x:16, y:10},
+    {n:102, s:"No", name:"Nobelio", cat:"actinido", x:17, y:10},
+    {n:103, s:"Lr", name:"Laurencio", cat:"actinido", x:18, y:10}
+];
+
+const container = document.getElementById('table');
+
+function init() {
+    const spacer = document.createElement('div');
+    spacer.className = 'f-block-title';
+    spacer.style.gridRow = "8";
+    spacer.innerText = "BLOQUE F (LANTÁNIDOS Y ACTÍNIDOS)";
+    container.appendChild(spacer);
+
+    elements.forEach(el => {
+        const div = document.createElement('div');
+        div.className = `element ${el.cat}`;
+        div.style.gridColumn = el.x;
+        div.style.gridRow = el.y;
+        div.innerHTML = `
+            <div class="symbol">${el.s}</div>
+            <div class="name">${el.name}</div>
+        `;
+        div.onclick = () => showModal(el);
+        container.appendChild(div);
+    });
+}
+
+function showModal(el) {
+    if (typeof el.n === 'string') return;
+    document.getElementById('m-sym').innerText = el.s;
+    document.getElementById('m-name').innerText = el.name;
+    document.getElementById('m-num').innerText = el.n;
+    document.getElementById('m-cat').innerText = el.cat.replace('-', ' ');
+    document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+
+init();
+</script>
+
+</body>
+</html>
