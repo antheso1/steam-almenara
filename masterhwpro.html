@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hardware Master Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .item-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .item-card:hover {
+            background: rgba(51, 65, 85, 0.8);
+            transform: translateY(-2px);
+        }
+        .selected {
+            border: 2px solid #3b82f6;
+            background: rgba(59, 130, 246, 0.2) !important;
+        }
+        .matched {
+            border: 2px solid #10b981;
+            background: rgba(16, 185, 129, 0.2) !important;
+            opacity: 0.6;
+            cursor: default;
+            pointer-events: none;
+        }
+        .wrong {
+            border: 2px solid #ef4444;
+            animation: shake 0.4s ease-in-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <!-- Header Section -->
+    <header class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-4xl font-bold text-blue-400">Hardware Master Pro</h1>
+            <p class="text-slate-400 mt-1">Entrena tu conocimiento sobre componentes internos.</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <div class="glass-card px-6 py-3 rounded-xl flex items-center gap-4">
+                <div class="flex items-center gap-2 text-blue-300">
+                    <i class="fa-regular fa-clock"></i>
+                    <span id="timer" class="font-mono text-xl">00:00</span>
+                </div>
+                <button onclick="resetGame()" class="hover:rotate-180 transition-transform duration-500">
+                    <i class="fa-solid fa-rotate-right text-slate-400"></i>
+                </button>
+            </div>
+            <div id="scoreDisplay" class="glass-card px-6 py-3 rounded-xl font-bold text-emerald-400">
+                Puntos: 0
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-6xl mx-auto mb-8 flex gap-4 border-b border-slate-800 pb-4">
+        <button onclick="switchTab('test')" id="tab-test" class="px-6 py-2 rounded-lg bg-blue-600 text-white flex items-center gap-2 transition-all">
+            <i class="fa-solid fa-brain"></i> Test de Conceptos
+        </button>
+        <button onclick="switchTab('map')" id="tab-map" class="px-6 py-2 rounded-lg hover:bg-slate-800 text-slate-300 flex items-center gap-2 transition-all">
+            <i class="fa-solid fa-map"></i> Mapa de Placa Base
+        </button>
+    </div>
+
+    <!-- Main Game Area -->
+    <main class="max-w-6xl mx-auto">
+        
+        <!-- View: Concept Test -->
+        <div id="view-test" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Concepts Column -->
+            <section>
+                <div class="flex items-center gap-2 mb-4 text-blue-400 font-semibold uppercase tracking-wider text-sm">
+                    <i class="fa-solid fa-microchip"></i> Conceptos
+                </div>
+                <div id="conceptsContainer" class="space-y-3">
+                    <!-- Dinámico -->
+                </div>
+            </section>
+
+            <!-- Definitions Column -->
+            <section>
+                <div class="flex items-center gap-2 mb-4 text-blue-400 font-semibold uppercase tracking-wider text-sm">
+                    <i class="fa-solid fa-check-double"></i> Definiciones
+                </div>
+                <div id="definitionsContainer" class="space-y-3">
+                    <!-- Dinámico -->
+                </div>
+            </section>
+        </div>
+
+        <!-- View: Motherboard Map (Placeholder content) -->
+        <div id="view-map" class="hidden text-center py-12">
+            <div class="glass-card p-8 rounded-2xl inline-block max-w-2xl">
+                <i class="fa-solid fa-screwdriver-wrench text-6xl text-blue-500 mb-6"></i>
+                <h2 class="text-2xl font-bold mb-4">Modo Mapa Interactivo</h2>
+                <p class="text-slate-400 mb-6">Estamos preparando una placa base interactiva en alta definición para que puedas arrastrar los componentes a su sitio real.</p>
+                <button onclick="switchTab('test')" class="text-blue-400 hover:underline">Volver al Test de Conceptos</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Success Modal -->
+    <div id="winModal" class="fixed inset-0 bg-black/80 flex items-center justify-center hidden z-50">
+        <div class="glass-card p-10 rounded-3xl text-center max-w-sm">
+            <div class="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+                <i class="fa-solid fa-trophy text-white"></i>
+            </div>
+            <h2 class="text-3xl font-bold mb-2">¡Excelente!</h2>
+            <p class="text-slate-400 mb-6">Has completado todos los emparejamientos.</p>
+            <div class="text-2xl font-mono text-blue-400 mb-8" id="finalTimeDisplay">Tiempo: 00:00</div>
+            <button onclick="resetGame()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold transition-all">
+                Jugar de nuevo
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const gameData = [
+            { id: 1, name: "RAM", def: "Almacenamiento temporal y rápido para datos en uso inmediato.", icon: "fa-memory" },
+            { id: 2, name: "CPU", def: "El 'cerebro' del equipo. Ejecuta instrucciones y procesa datos.", icon: "fa-microchip" },
+            { id: 3, name: "PCI-Express", def: "Ranuras de expansión para tarjetas gráficas y otros periféricos.", icon: "fa-desktop" },
+            { id: 4, name: "Chipset", def: "Conjunto de circuitos que gestionan el flujo de datos entre CPU y periféricos.", icon: "fa-grip" },
+            { id: 5, name: "VRM", def: "Módulo regulador de voltaje que suministra energía estable al procesador.", icon: "fa-bolt" },
+            { id: 6, name: "BIOS/UEFI", def: "Firmware que inicia el hardware y carga el sistema operativo.", icon: "fa-code" }
+        ];
+
+        let selectedConcept = null;
+        let selectedDef = null;
+        let matchesFound = 0;
+        let score = 0;
+        let seconds = 0;
+        let timerInterval = null;
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            seconds = 0;
+            timerInterval = setInterval(() => {
+                seconds++;
+                const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const secs = (seconds % 60).toString().padStart(2, '0');
+                document.getElementById('timer').innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function shuffle(array) {
+            return [...array].sort(() => Math.random() - 0.5);
+        }
+
+        function renderGame() {
+            const conceptsContainer = document.getElementById('conceptsContainer');
+            const definitionsContainer = document.getElementById('definitionsContainer');
+            
+            conceptsContainer.innerHTML = '';
+            definitionsContainer.innerHTML = '';
+
+            const shuffledConcepts = shuffle(gameData);
+            const shuffledDefs = shuffle(gameData);
+
+            shuffledConcepts.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'item-card glass-card p-5 rounded-xl flex items-center gap-4';
+                div.id = `concept-${item.id}`;
+                div.innerHTML = `
+                    <div class="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-lg text-slate-400">
+                        <i class="fa-solid ${item.icon}"></i>
+                    </div>
+                    <span class="font-bold text-lg">${item.name}</span>
+                `;
+                div.onclick = () => selectItem(item.id, 'concept');
+                conceptsContainer.appendChild(div);
+            });
+
+            shuffledDefs.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'item-card glass-card p-5 rounded-xl min-h-[80px] flex items-center';
+                div.id = `def-${item.id}`;
+                div.innerHTML = `<p class="text-slate-300 leading-tight">${item.def}</p>`;
+                div.onclick = () => selectItem(item.id, 'def');
+                definitionsContainer.appendChild(div);
+            });
+        }
+
+        function selectItem(id, type) {
+            if (type === 'concept') {
+                if (selectedConcept) document.getElementById(`concept-${selectedConcept}`).classList.remove('selected');
+                selectedConcept = id;
+                document.getElementById(`concept-${id}`).classList.add('selected');
+            } else {
+                if (selectedDef) document.getElementById(`def-${selectedDef}`).classList.remove('selected');
+                selectedDef = id;
+                document.getElementById(`def-${id}`).classList.add('selected');
+            }
+
+            checkMatch();
+        }
+
+        function checkMatch() {
+            if (selectedConcept && selectedDef) {
+                if (selectedConcept === selectedDef) {
+                    // Match Correcto
+                    const cElem = document.getElementById(`concept-${selectedConcept}`);
+                    const dElem = document.getElementById(`def-${selectedDef}`);
+                    
+                    cElem.classList.replace('selected', 'matched');
+                    dElem.classList.replace('selected', 'matched');
+                    
+                    score += 100;
+                    matchesFound++;
+                    document.getElementById('scoreDisplay').innerText = `Puntos: ${score}`;
+                    
+                    selectedConcept = null;
+                    selectedDef = null;
+
+                    if (matchesFound === gameData.length) {
+                        endGame();
+                    }
+                } else {
+                    // Match Incorrecto
+                    const cElem = document.getElementById(`concept-${selectedConcept}`);
+                    const dElem = document.getElementById(`def-${selectedDef}`);
+                    
+                    cElem.classList.add('wrong');
+                    dElem.classList.add('wrong');
+                    
+                    setTimeout(() => {
+                        cElem.classList.remove('wrong', 'selected');
+                        dElem.classList.remove('wrong', 'selected');
+                    }, 400);
+
+                    selectedConcept = null;
+                    selectedDef = null;
+                }
+            }
+        }
+
+        function switchTab(tab) {
+            const testView = document.getElementById('view-test');
+            const mapView = document.getElementById('view-map');
+            const btnTest = document.getElementById('tab-test');
+            const btnMap = document.getElementById('tab-map');
+
+            if (tab === 'test') {
+                testView.classList.remove('hidden');
+                mapView.classList.add('hidden');
+                btnTest.classList.add('bg-blue-600', 'text-white');
+                btnTest.classList.remove('hover:bg-slate-800', 'text-slate-300');
+                btnMap.classList.remove('bg-blue-600', 'text-white');
+                btnMap.classList.add('hover:bg-slate-800', 'text-slate-300');
+            } else {
+                testView.classList.add('hidden');
+                mapView.classList.remove('hidden');
+                btnMap.classList.add('bg-blue-600', 'text-white');
+                btnMap.classList.remove('hover:bg-slate-800', 'text-slate-300');
+                btnTest.classList.remove('bg-blue-600', 'text-white');
+                btnTest.classList.add('hover:bg-slate-800', 'text-slate-300');
+            }
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            document.getElementById('finalTimeDisplay').innerText = `Tiempo: ${document.getElementById('timer').innerText}`;
+            document.getElementById('winModal').classList.remove('hidden');
+        }
+
+        function resetGame() {
+            matchesFound = 0;
+            score = 0;
+            selectedConcept = null;
+            selectedDef = null;
+            document.getElementById('scoreDisplay').innerText = `Puntos: 0`;
+            document.getElementById('winModal').classList.add('hidden');
+            document.getElementById('timer').innerText = `00:00`;
+            startTimer();
+            renderGame();
+        }
+
+        // Init
+        window.onload = resetGame;
+    </script>
+</body>
+</html>
