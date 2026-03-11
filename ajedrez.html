@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajedrez Clásico 2D - Reglas Completas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --light-sq: #f0d9b5;
+            --dark-sq: #b58863;
+            --highlight: rgba(255, 255, 0, 0.4);
+            --selected: rgba(0, 255, 0, 0.5);
+            --check: rgba(255, 0, 0, 0.7);
+        }
+        body { background-color: #1a1a1a; font-family: sans-serif; }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 100%;
+            max-width: 550px;
+            aspect-ratio: 1 / 1;
+            border: 8px solid #333;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .square {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        .square.light { background-color: var(--light-sq); }
+        .square.dark { background-color: var(--dark-sq); }
+        .square.selected { background-color: var(--selected) !important; }
+        .square.last-move { background-color: rgba(255, 255, 0, 0.25); }
+        .square.in-check { background-color: var(--check) !important; }
+        
+        .piece {
+            width: 90%;
+            height: 90%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 10;
+        }
+        
+        .dot {
+            position: absolute;
+            width: 25%;
+            height: 25%;
+            background: rgba(0,0,0,0.15);
+            border-radius: 50%;
+            z-index: 5;
+        }
+        .capture-ring {
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            border: 5px solid rgba(0,0,0,0.15);
+            border-radius: 50%;
+            z-index: 5;
+        }
+
+        .w-p { background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg'); }
+        .w-r { background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg'); }
+        .w-n { background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg'); }
+        .w-b { background-image: url('https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg'); }
+        .w-q { background-image: url('https://upload.wikimedia.org/wikipedia/commons/1/15/Chess_qlt45.svg'); }
+        .w-k { background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg'); }
+        
+        .b-p { background-image: url('https://upload.wikimedia.org/wikipedia/commons/c/c7/Chess_pdt45.svg'); }
+        .b-r { background-image: url('https://upload.wikimedia.org/wikipedia/commons/f/ff/Chess_rdt45.svg'); }
+        .b-n { background-image: url('https://upload.wikimedia.org/wikipedia/commons/e/ef/Chess_ndt45.svg'); }
+        .b-b { background-image: url('https://upload.wikimedia.org/wikipedia/commons/9/98/Chess_bdt45.svg'); }
+        .b-q { background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg'); }
+        .b-k { background-image: url('https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg'); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="mb-6 text-center">
+        <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">Ajedrez Profesional</h1>
+        <div id="status" class="bg-gray-800 text-amber-200 px-8 py-3 rounded-full border border-gray-600 shadow-xl transition-all duration-300">
+            Cargando tablero...
+        </div>
+    </div>
+
+    <div id="board" class="board"></div>
+
+    <div class="mt-8 flex flex-col items-center gap-4">
+        <div class="flex gap-4">
+            <button onclick="resetGame()" class="bg-amber-700 hover:bg-amber-600 text-white px-6 py-2 rounded shadow-lg font-bold transition">Nueva Partida</button>
+            <button id="undo-btn" onclick="undoMove()" class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded shadow-lg font-bold transition disabled:opacity-50 disabled:cursor-not-allowed">Paso Atrás</button>
+        </div>
+        <div id="check-alert" class="hidden text-red-500 font-extrabold uppercase tracking-widest animate-pulse text-xl">
+            ¡JAQUE!
+        </div>
+    </div>
+
+    <script>
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('status');
+        const checkAlert = document.getElementById('check-alert');
+        const undoBtn = document.getElementById('undo-btn');
+        
+        let board = [];
+        let selectedSquare = null;
+        let validMoves = [];
+        let turn = 'w';
+        let gameOver = false;
+        let lastMove = null;
+        let history = []; // Almacena estados anteriores para permitir el "paso atrás"
+
+        const initialSetup = [
+            ['b-r', 'b-n', 'b-b', 'b-q', 'b-k', 'b-b', 'b-n', 'b-r'],
+            ['b-p', 'b-p', 'b-p', 'b-p', 'b-p', 'b-p', 'b-p', 'b-p'],
+            [null, null, null, null, null, null, null, null],
+            [null, null, null, null, null, null, null, null],
+            [null, null, null, null, null, null, null, null],
+            [null, null, null, null, null, null, null, null],
+            ['w-p', 'w-p', 'w-p', 'w-p', 'w-p', 'w-p', 'w-p', 'w-p'],
+            ['w-r', 'w-n', 'w-b', 'w-q', 'w-k', 'w-b', 'w-n', 'w-r']
+        ];
+
+        function initGame() {
+            board = JSON.parse(JSON.stringify(initialSetup));
+            history = [];
+            gameOver = false;
+            turn = 'w';
+            lastMove = null;
+            selectedSquare = null;
+            validMoves = [];
+            updateUndoBtn();
+            renderBoard();
+            updateStatus();
+        }
+
+        // Guarda el estado actual antes de un movimiento
+        function saveState() {
+            history.push({
+                board: JSON.parse(JSON.stringify(board)),
+                turn: turn,
+                lastMove: lastMove ? { ...lastMove } : null
+            });
+            updateUndoBtn();
+        }
+
+        // Lógica de "Paso Atrás"
+        function undoMove() {
+            if (history.length === 0 || (gameOver && turn === 'b')) return; 
+            
+            // Retrocedemos 2 pasos para volver al turno del jugador (salvo que sea el primer movimiento)
+            let steps = turn === 'b' ? 1 : 2;
+            if (history.length < steps) steps = history.length;
+
+            for(let i = 0; i < steps; i++) {
+                if (history.length > 0) {
+                    const prevState = history.pop();
+                    board = prevState.board;
+                    turn = prevState.turn;
+                    lastMove = prevState.lastMove;
+                }
+            }
+            
+            gameOver = false;
+            selectedSquare = null;
+            validMoves = [];
+            statusElement.className = "bg-gray-800 text-amber-200 px-8 py-3 rounded-full border border-gray-600 shadow-xl transition-all duration-300";
+            updateUndoBtn();
+            renderBoard();
+            updateStatus();
+        }
+
+        function updateUndoBtn() {
+            undoBtn.disabled = history.length === 0;
+        }
+
+        function renderBoard() {
+            boardElement.innerHTML = '';
+            const kingPos = findKing(turn, board);
+            const kingInCheck = isSquareAttacked(kingPos.r, kingPos.c, turn === 'w' ? 'b' : 'w', board);
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const sq = document.createElement('div');
+                    sq.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    
+                    if (lastMove && ((lastMove.fr === r && lastMove.fc === c) || (lastMove.tr === r && lastMove.tc === c))) {
+                        sq.classList.add('last-move');
+                    }
+                    if (selectedSquare && selectedSquare.r === r && selectedSquare.c === c) {
+                        sq.classList.add('selected');
+                    }
+                    
+                    const piece = board[r][c];
+                    if (piece) {
+                        const pieceDiv = document.createElement('div');
+                        pieceDiv.className = `piece ${piece}`;
+                        sq.appendChild(pieceDiv);
+                        
+                        if (piece[2] === 'k' && piece[0] === turn && kingInCheck) {
+                            sq.classList.add('in-check');
+                        }
+                    }
+
+                    const isMove = validMoves.find(m => m.r === r && m.c === c);
+                    if (isMove) {
+                        const hint = document.createElement('div');
+                        hint.className = piece ? 'capture-ring' : 'dot';
+                        sq.appendChild(hint);
+                    }
+
+                    sq.onclick = () => onSquareClick(r, c);
+                    boardElement.appendChild(sq);
+                }
+            }
+            checkAlert.classList.toggle('hidden', !kingInCheck || gameOver);
+        }
+
+        function onSquareClick(r, c) {
+            if (gameOver || turn === 'b') return;
+
+            const move = validMoves.find(m => m.r === r && m.c === c);
+            if (move) {
+                saveState();
+                executeMove(selectedSquare.r, selectedSquare.c, r, c);
+                return;
+            }
+
+            const piece = board[r][c];
+            if (piece && typeof piece === 'string' && piece.startsWith(turn)) {
+                selectedSquare = { r, c };
+                validMoves = getLegalMoves(r, c, board);
+            } else {
+                selectedSquare = null;
+                validMoves = [];
+            }
+            renderBoard();
+        }
+
+        function getLegalMoves(r, c, currentBoard) {
+            const rawMoves = getPseudoLegalMoves(r, c, currentBoard);
+            const legalMoves = [];
+            const piece = currentBoard[r][c];
+            if (!piece) return [];
+            const color = piece[0];
+
+            for (const move of rawMoves) {
+                const tempBoard = JSON.parse(JSON.stringify(currentBoard));
+                tempBoard[move.r][move.c] = tempBoard[r][c];
+                tempBoard[r][c] = null;
+
+                const kingPos = findKing(color, tempBoard);
+                const enemyColor = color === 'w' ? 'b' : 'w';
+                
+                if (!isSquareAttacked(kingPos.r, kingPos.c, enemyColor, tempBoard)) {
+                    legalMoves.push(move);
+                }
+            }
+            return legalMoves;
+        }
+
+        function getPseudoLegalMoves(r, c, b) {
+            const piece = b[r][c];
+            if (!piece || typeof piece !== 'string') return [];
+            const color = piece[0], type = piece[2], moves = [];
+
+            const directions = {
+                'r': [[0,1],[0,-1],[1,0],[-1,0]],
+                'b': [[1,1],[1,-1],[-1,1],[-1,-1]],
+                'n': [[1,2],[1,-2],[-1,2],[-1,-2],[2,1],[2,-1],[-2,1],[-2,-1]],
+                'k': [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]
+            };
+            directions['q'] = [...directions['r'], ...directions['b']];
+
+            if (type === 'p') {
+                const dir = color === 'w' ? -1 : 1;
+                if (r+dir >= 0 && r+dir < 8 && !b[r+dir][c]) {
+                    moves.push({r: r+dir, c});
+                    const startRow = color === 'w' ? 6 : 1;
+                    if (r === startRow && !b[r+2*dir][c]) moves.push({r: r+2*dir, c});
+                }
+                for (let dc of [-1, 1]) {
+                    if (r+dir >= 0 && r+dir < 8 && c+dc >= 0 && c+dc < 8) {
+                        const target = b[r+dir][c+dc];
+                        if (target && target[0] !== color) moves.push({r: r+dir, c: c+dc});
+                    }
+                }
+            } else if (['r','b','q'].includes(type)) {
+                for (let [dr, dc] of directions[type]) {
+                    let nr=r+dr, nc=c+dc;
+                    while(nr>=0 && nr<8 && nc>=0 && nc<8) {
+                        if (!b[nr][nc]) moves.push({r:nr, c:nc});
+                        else { if(b[nr][nc][0] !== color) moves.push({r:nr, c:nc}); break; }
+                        nr+=dr; nc+=dc;
+                    }
+                }
+            } else {
+                for (let [dr, dc] of directions[type]) {
+                    let nr=r+dr, nc=c+dc;
+                    if (nr>=0 && nr<8 && nc>=0 && nc<8 && (!b[nr][nc] || b[nr][nc][0] !== color)) moves.push({r:nr, c:nc});
+                }
+            }
+            return moves;
+        }
+
+        function isSquareAttacked(r, c, attackerColor, b) {
+            for (let i=0; i<8; i++) {
+                for (let j=0; j<8; j++) {
+                    const piece = b[i][j];
+                    if (piece && typeof piece === 'string' && piece[0] === attackerColor) {
+                        const moves = getPseudoLegalMoves(i, j, b);
+                        if (moves.some(m => m.r === r && m.c === c)) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function findKing(color, b) {
+            for (let r=0; r<8; r++) {
+                for (let c=0; c<8; c++) {
+                    if (b[r][c] === `${color}-k`) return {r, c};
+                }
+            }
+            return {r: 0, c: 0};
+        }
+
+        function executeMove(fr, fc, tr, tc) {
+            lastMove = { fr, fc, tr, tc };
+            board[tr][tc] = board[fr][fc];
+            board[fr][fc] = null;
+
+            if (board[tr][tc][2] === 'p' && (tr === 0 || tr === 7)) {
+                board[tr][tc] = board[tr][tc].substring(0, 2) + 'q';
+            }
+
+            selectedSquare = null;
+            validMoves = [];
+            turn = turn === 'w' ? 'b' : 'w';
+            
+            checkGameOver();
+            renderBoard();
+            updateStatus();
+
+            if (!gameOver && turn === 'b') {
+                setTimeout(aiMove, 600);
+            }
+        }
+
+        function aiMove() {
+            const allLegalMoves = [];
+            for (let r=0; r<8; r++) {
+                for (let c=0; c<8; c++) {
+                    if (board[r][c] && board[r][c].startsWith('b')) {
+                        const moves = getLegalMoves(r, c, board);
+                        moves.forEach(m => {
+                            let score = 0;
+                            if (board[m.r][m.c]) {
+                                const targetType = board[m.r][m.c][2];
+                                const values = {'p':1, 'n':3, 'b':3, 'r':5, 'q':9, 'k':0};
+                                score = values[targetType] * 10;
+                            }
+                            allLegalMoves.push({fr:r, fc:c, tr:m.r, tc:m.c, score: score});
+                        });
+                    }
+                }
+            }
+
+            if (allLegalMoves.length === 0) {
+                checkGameOver();
+                return;
+            }
+
+            allLegalMoves.sort((a, b) => b.score - a.score);
+            const bestMoves = allLegalMoves.filter(m => m.score === allLegalMoves[0].score);
+            const move = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+            
+            executeMove(move.fr, move.fc, move.tr, move.tc);
+        }
+
+        function checkGameOver() {
+            let anyMove = false;
+            for (let r=0; r<8; r++) {
+                for (let c=0; c<8; c++) {
+                    const piece = board[r][c];
+                    if (piece && typeof piece === 'string' && piece.startsWith(turn)) {
+                        if (getLegalMoves(r, c, board).length > 0) {
+                            anyMove = true;
+                            break;
+                        }
+                    }
+                }
+                if (anyMove) break;
+            }
+
+            if (!anyMove) {
+                gameOver = true;
+                const kingPos = findKing(turn, board);
+                const enemyColor = turn === 'w' ? 'b' : 'w';
+                const inCheck = isSquareAttacked(kingPos.r, kingPos.c, enemyColor, board);
+                
+                if (inCheck) {
+                    const winner = turn === 'w' ? "NEGRAS" : "BLANCAS";
+                    statusElement.innerText = `¡JAQUE MATE! GANAN LAS ${winner}`;
+                    statusElement.className = "bg-red-800 text-white px-8 py-3 rounded-full shadow-2xl scale-110 font-bold border-4 border-white transition-all";
+                } else {
+                    statusElement.innerText = "TABLAS (Ahogado)";
+                    statusElement.className = "bg-gray-600 text-white px-8 py-3 rounded-full shadow-xl font-bold";
+                }
+            }
+        }
+
+        function updateStatus() {
+            if (gameOver) return;
+            statusElement.innerText = turn === 'w' ? "Turno: Blancas" : "La IA está pensando...";
+        }
+
+        function resetGame() {
+            statusElement.className = "bg-gray-800 text-amber-200 px-8 py-3 rounded-full border border-gray-600 shadow-xl";
+            initGame();
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
