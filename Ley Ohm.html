@@ -34,6 +34,26 @@
 </head>
 <body class="bg-gray-50 p-2 md:p-6">
 
+<div class="flex justify-end p-2 bg-gray-100 border-b">
+    <button onclick="cerrarVentana()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-full flex items-center gap-2 shadow-lg transition-transform active:scale-95">
+        <span class="text-sm font-black">X</span>
+        <span class="text-[10px] uppercase">Cerrar / Volver</span>
+    </button>
+</div>
+
+<script>
+function cerrarVentana() {
+    // Intenta cerrar la pestaña (solo funciona si la web se abrió en ventana nueva)
+    window.close();
+    
+    // Si no se cierra (porque no es ventana nueva), vuelve atrás en el historial
+    setTimeout(function() {
+        window.history.back();
+    }, 100);
+}
+</script>
+
+    
     <div class="bg-white p-4 md:p-8 rounded-2xl shadow-xl w-full max-w-4xl border border-gray-200 mx-auto">
         
         <div class="text-center mb-6">
@@ -88,3 +108,4 @@
                 <input type="number" step="any" id="val-r" placeholder="Resistencia" class="min-w-0 flex-grow h-full px-4 text-xl md:text-2xl font-bold text-gray-700 focus:outline-none bg-transparent">
                 <div class="bg-gray-50 border-l border-gray-200 w-20 md:w-24 h-full flex-shrink-0 relative z-10">
                     <select id="unit-r" class="
+
