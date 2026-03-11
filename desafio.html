@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desafío Químico - Adivina el Elemento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .input-focus:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="game-container" class="w-full max-w-md bg-white rounded-2xl card-shadow p-6 space-y-6 border border-gray-100">
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <div class="flex justify-center">
+                <div class="bg-indigo-100 p-3 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.628.288a2 2 0 01-1.945 0l-.628-.288a6 6 0 00-3.86-.517l-2.387.477a2 2 0 00-1.022.547l-1.16 1.16a2 2 0 00.41 3.206l1.83.915a2 2 0 001.789 0l1.83-.915a2 2 0 011.789 0l1.83.915a2 2 0 001.789 0l1.83-.915a2 2 0 00.41-3.206l-1.16-1.16zM12 9V4m0 0L9 7m3-3l3 3" />
+                    </svg>
+                </div>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-800">Desafío Químico</h1>
+            <p class="text-slate-500 text-sm">Adivina el elemento basado en la pista.</p>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="flex justify-between items-center px-2">
+            <div class="text-slate-700 font-semibold">Puntuación: <span id="score" class="text-blue-600">0</span></div>
+            <div class="text-slate-700 font-semibold">Ronda: <span id="round" class="text-blue-600">1</span></div>
+        </div>
+
+        <!-- Riddle Card -->
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 space-y-3">
+            <h3 class="text-blue-800 font-bold uppercase tracking-wider text-xs">Elemento Misterioso:</h3>
+            <p id="hint-text" class="text-blue-900 italic leading-relaxed text-sm lg:text-base">
+                Cargando pista...
+            </p>
+        </div>
+
+        <!-- Inputs Form -->
+        <div class="space-y-4">
+            <div class="space-y-1">
+                <label for="element-name" class="block text-sm font-medium text-slate-700">Nombre del Elemento</label>
+                <input type="text" id="element-name" placeholder="Ej: Oxígeno" autocomplete="off" 
+                       class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus transition-all placeholder:text-gray-400">
+            </div>
+
+            <div class="space-y-1">
+                <label for="element-symbol" class="block text-sm font-medium text-slate-700">Símbolo Químico</label>
+                <input type="text" id="element-symbol" placeholder="Ej: O" autocomplete="off"
+                       class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus transition-all placeholder:text-gray-400 uppercase">
+            </div>
+
+            <button id="check-btn" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-md active:scale-[0.98]">
+                Comprobar Respuesta
+            </button>
+        </div>
+
+        <!-- Feedback Message -->
+        <div id="feedback" class="hidden text-center p-3 rounded-lg font-medium transition-all text-sm">
+        </div>
+
+        <!-- High Scores Footer -->
+        <div class="pt-6 border-t border-gray-100 text-center">
+            <h4 class="text-blue-800 font-bold text-lg mb-2">Mejores Puntuaciones</h4>
+            <p id="high-score-msg" class="text-slate-500 text-xs">
+                Sé el primero en establecer un récord. <br>
+                <span class="font-mono text-[10px]" id="user-id-display"></span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Database de elementos
+        const elementsDB = [
+            { name: "Oro", symbol: "Au", hint: "Un metal precioso de color amarillo brillante, conocido por su inercia química y su uso en joyería." },
+            { name: "Oxígeno", symbol: "O", hint: "Gas incoloro e inodoro que constituye el 21% de la atmósfera terrestre y es vital para la respiración." },
+            { name: "Hierro", symbol: "Fe", hint: "Metal magnético fundamental en la fabricación de acero y componente central de la hemoglobina en la sangre." },
+            { name: "Hidrógeno", symbol: "H", hint: "El elemento más ligero y abundante del universo; es el combustible principal de las estrellas." },
+            { name: "Carbono", symbol: "C", hint: "Base fundamental de la química orgánica; puede presentarse como grafito o diamante." },
+            { name: "Nitrógeno", symbol: "N", hint: "Gas que compone la mayor parte del aire que respiramos y es esencial para los fertilizantes." },
+            { name: "Sodio", symbol: "Na", hint: "Metal alcalino altamente reactivo que forma parte de la sal de mesa común." },
+            { name: "Cloro", symbol: "Cl", hint: "Halógeno de color verde amarillento usado frecuentemente para desinfectar piscinas." },
+            { name: "Helio", symbol: "He", hint: "Gas noble utilizado para inflar globos y conocido por su bajísima temperatura de ebullición." },
+            { name: "Plata", symbol: "Ag", hint: "Metal con la mayor conductividad eléctrica y térmica de todos los elementos." },
+            { name: "Cobre", symbol: "Cu", hint: "Metal rojizo ampliamente utilizado en cables eléctricos por su excelente conductividad." },
+            { name: "Mercurio", symbol: "Hg", hint: "El único metal que es líquido a temperatura ambiente, conocido como 'plata viva'." }
+        ];
+
+        let currentScore = 0;
+        let currentRound = 1;
+        let currentElement = null;
+        let highScore = localStorage.getItem('quimicaHighScore') || 0;
+
+        // Elementos del DOM
+        const hintEl = document.getElementById('hint-text');
+        const scoreEl = document.getElementById('score');
+        const roundEl = document.getElementById('round');
+        const nameInput = document.getElementById('element-name');
+        const symbolInput = document.getElementById('element-symbol');
+        const checkBtn = document.getElementById('check-btn');
+        const feedbackEl = document.getElementById('feedback');
+        const highScoreMsg = document.getElementById('high-score-msg');
+        const userIdDisplay = document.getElementById('user-id-display');
+
+        // Generar un ID de usuario único para la sesión (estilo imagen proporcionada)
+        const sessionId = Array.from({length: 20}, () => Math.floor(Math.random() * 10)).join('');
+        userIdDisplay.textContent = `(ID de usuario: ${sessionId})`;
+
+        function initGame() {
+            if(highScore > 0) {
+                highScoreMsg.innerHTML = `Récord actual: <span class="font-bold text-blue-600">${highScore} puntos</span>. <br> <span class="font-mono text-[10px]">${userIdDisplay.textContent}</span>`;
+            }
+            nextRound();
+        }
+
+        function nextRound() {
+            // Seleccionar elemento aleatorio
+            const availableElements = elementsDB.filter(e => e !== currentElement);
+            currentElement = availableElements[Math.floor(Math.random() * availableElements.length)];
+            
+            // Actualizar interfaz
+            hintEl.textContent = currentElement.hint;
+            nameInput.value = "";
+            symbolInput.value = "";
+            nameInput.focus();
+            
+            showFeedback("¡Comienza la ronda! Suerte.", "bg-green-100 text-green-700", 3000);
+        }
+
+        function showFeedback(text, classes, duration = 3000) {
+            feedbackEl.textContent = text;
+            feedbackEl.className = `block text-center p-3 rounded-lg font-medium transition-all text-sm ${classes}`;
+            feedbackEl.classList.remove('hidden');
+            
+            if (duration > 0) {
+                setTimeout(() => {
+                    feedbackEl.classList.add('hidden');
+                }, duration);
+            }
+        }
+
+        function checkAnswer() {
+            const userNm = nameInput.value.trim().toLowerCase();
+            const userSym = symbolInput.value.trim().toUpperCase();
+
+            const correctNm = currentElement.name.toLowerCase();
+            const correctSym = currentElement.symbol.toUpperCase();
+
+            // Normalización básica de tildes para el nombre
+            const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+            if (normalize(userNm) === normalize(correctNm) && userSym === correctSym) {
+                // Acierto
+                currentScore += 10;
+                currentRound += 1;
+                scoreEl.textContent = currentScore;
+                roundEl.textContent = currentRound;
+                
+                // Actualizar Record
+                if (currentScore > highScore) {
+                    highScore = currentScore;
+                    localStorage.setItem('quimicaHighScore', highScore);
+                }
+
+                showFeedback("¡Correcto! +10 puntos", "bg-green-100 text-green-700");
+                
+                // Animación de botón
+                checkBtn.classList.replace('bg-blue-600', 'bg-green-500');
+                setTimeout(() => {
+                    checkBtn.classList.replace('bg-green-500', 'bg-blue-600');
+                    nextRound();
+                }, 1000);
+
+            } else {
+                // Error
+                showFeedback(`Incorrecto. Era el ${currentElement.name} (${currentElement.symbol})`, "bg-red-100 text-red-700");
+                
+                checkBtn.classList.replace('bg-blue-600', 'bg-red-500');
+                setTimeout(() => {
+                    checkBtn.classList.replace('bg-red-500', 'bg-blue-600');
+                    // Penalización ligera o simplemente nueva ronda
+                    nextRound();
+                }, 2000);
+            }
+        }
+
+        // Listeners
+        checkBtn.addEventListener('click', checkAnswer);
+
+        // Permitir Enter para enviar
+        [nameInput, symbolInput].forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') checkAnswer();
+            });
+        });
+
+        // Iniciar
+        window.onload = initGame;
+    </script>
+</body>
+</html>
