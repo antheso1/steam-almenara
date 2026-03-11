@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motherboard Master: Defensor del Circuito</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            font-family: 'Press Start 2P', cursive;
+            color: white;
+            touch-action: none; /* Previene scroll en móviles */
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            background: #0f380f; /* Verde clásico de PCB */
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            border: 4px solid #333;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            pointer-events: none;
+            text-shadow: 2px 2px #000;
+        }
+
+        .stat {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            text-align: center;
+        }
+
+        h1 {
+            color: #00ff00;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            font-size: 24px;
+        }
+
+        p {
+            font-size: 12px;
+            color: #ccc;
+            line-height: 1.8;
+            max-width: 600px;
+            padding: 0 20px;
+        }
+
+        .btn {
+            margin-top: 30px;
+            padding: 15px 30px;
+            background: #00ff00;
+            color: #000;
+            border: none;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .btn:hover {
+            transform: scale(1.1);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 5px 0;
+            font-size: 10px;
+        }
+        .legend-icon {
+            width: 15px;
+            height: 15px;
+            margin-right: 10px;
+            display: inline-block;
+        }
+
+        #controls-hint {
+            margin-top: 20px;
+            color: #ffff00;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui-layer">
+        <div class="stat">PUNTOS: <span id="scoreEl">0</span></div>
+        <div class="stat">ENERGÍA: <span id="healthEl">100</span>%</div>
+        <div class="stat">RAM (BOOST): <span id="ramEl">0</span>s</div>
+    </div>
+
+    <div id="startScreen">
+        <h1>MOTHERBOARD MASTER</h1>
+        <p>Eres el <strong>MICROPROCESADOR</strong>. Defiende la placa base.</p>
+        <div style="text-align: left; display: inline-block; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 5px;">
+            <div class="legend-item"><span class="legend-icon" style="background:red;"></span> Enemigo (Bug/Calor)</div>
+            <div class="legend-item"><span class="legend-icon" style="background:#00ff00;"></span> RAM (Velocidad de Disparo)</div>
+            <div class="legend-item"><span class="legend-icon" style="background:#00ffff;"></span> SSD (Limpieza Total)</div>
+            <div class="legend-item"><span class="legend-icon" style="background:#ffff00;"></span> Energía (Salud)</div>
+        </div>
+        <p id="controls-hint">Usa FLECHAS o TOCA para moverte.<br>El disparo es automático vía buses PCI-e.</p>
+        <button class="btn" id="startBtn">INICIAR SISTEMA</button>
+    </div>
+
+    <div id="gameOverScreen" class="hidden">
+        <h1 style="color:red;">SYSTEM FAILURE</h1>
+        <p>El sistema se ha sobrecalentado.</p>
+        <p>Puntuación Final: <span id="finalScore">0</span></p>
+        <button class="btn" id="restartBtn">REINICIAR BIOS</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startScreen = document.getElementById('startScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const scoreEl = document.getElementById('scoreEl');
+    const healthEl = document.getElementById('healthEl');
+    const ramEl = document.getElementById('ramEl');
+    const finalScoreEl = document.getElementById('finalScore');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    // Game State
+    let gameRunning = false;
+    let score = 0;
+    let frames = 0;
+    let width, height;
+    
+    // Player (CPU)
+    const player = {
+        x: 0,
+        y: 0,
+        width: 40,
+        height: 40,
+        speed: 7,
+        color: '#silver',
+        health: 100,
+        ramBoostTimer: 0
+    };
+
+    // Input
+    const keys = {
+        ArrowLeft: false,
+        ArrowRight: false
+    };
+    let touchX = null;
+
+    // Entities
+    let bullets = [];
+    let enemies = [];
+    let particles = [];
+    let powerups = [];
+
+    // Circuit Background Traces
+    let traces = [];
+
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        player.y = height - 80;
+        player.x = width / 2 - player.width / 2;
+        generateTraces();
+    }
+
+    function generateTraces() {
+        traces = [];
+        for (let i = 0; i < 20; i++) {
+            traces.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                w: Math.random() > 0.5 ? 2 : 4,
+                h: Math.random() * 100 + 50,
+                speed: Math.random() * 2 + 0.5
+            });
+        }
+    }
+
+    // Input Handling
+    window.addEventListener('keydown', (e) => {
+        if (keys.hasOwnProperty(e.code)) keys[e.code] = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
+    });
+
+    // Touch controls
+    canvas.addEventListener('touchstart', (e) => {
+        touchX = e.touches[0].clientX;
+    });
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        touchX = e.touches[0].clientX;
+    });
+    canvas.addEventListener('touchend', () => {
+        touchX = null;
+    });
+
+    // Classes
+    class Bullet {
+        constructor(x, y, isSuper) {
+            this.x = x;
+            this.y = y;
+            this.width = isSuper ? 8 : 4;
+            this.height = 15;
+            this.speed = 10;
+            this.color = isSuper ? '#00ffff' : '#ffff00'; // PCIe Data Packet
+            this.markedForDeletion = false;
+        }
+        update() {
+            this.y -= this.speed;
+            if (this.y < 0) this.markedForDeletion = true;
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            // Trail effect
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+            ctx.fillRect(this.x, this.y + 10, this.width, 10);
+        }
+    }
+
+    class Enemy {
+        constructor() {
+            this.width = 30;
+            this.height = 30;
+            this.x = Math.random() * (width - this.width);
+            this.y = -this.height;
+            this.speed = Math.random() * 2 + 2 + (score / 500); // Get harder
+            this.type = Math.random() > 0.8 ? 'bottleneck' : 'bug';
+            this.color = this.type === 'bug' ? '#ff3333' : '#aa5500'; // Red=Bug, Orange=Heat/Bottleneck
+            this.health = this.type === 'bottleneck' ? 3 : 1;
+            this.markedForDeletion = false;
+        }
+        update() {
+            this.y += this.speed;
+            if (this.y > height) {
+                this.markedForDeletion = true;
+                player.health -= 10; // Penalty for missing enemies
+                createParticles(this.x, height-10, '#ff0000', 5);
+            }
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            if (this.type === 'bug') {
+                // Draw Bug shape
+                ctx.beginPath();
+                ctx.arc(this.x + 15, this.y + 15, 15, 0, Math.PI * 2);
+                ctx.fill();
+                // Eyes
+                ctx.fillStyle = 'black';
+                ctx.fillRect(this.x + 8, this.y + 10, 4, 4);
+                ctx.fillRect(this.x + 18, this.y + 10, 4, 4);
+            } else {
+                // Draw Bottleneck (Square)
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.strokeStyle = '#fff';
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+            }
+        }
+    }
+
+    class PowerUp {
+        constructor() {
+            this.width = 25;
+            this.height = 25;
+            this.x = Math.random() * (width - this.width);
+            this.y = -this.height;
+            this.speed = 3;
+            // Types: RAM (Speed), SSD (Bomb), ENERGY (Health)
+            const rand = Math.random();
+            if (rand < 0.4) this.type = 'RAM';
+            else if (rand < 0.7) this.type = 'SSD';
+            else this.type = 'ENERGY';
+            
+            this.markedForDeletion = false;
+        }
+        update() {
+            this.y += this.speed;
+            if (this.y > height) this.markedForDeletion = true;
+        }
+        draw() {
+            ctx.fillStyle = '#fff';
+            if (this.type === 'RAM') ctx.fillStyle = '#00ff00';
+            if (this.type === 'SSD') ctx.fillStyle = '#00ffff';
+            if (this.type === 'ENERGY') ctx.fillStyle = '#ffff00';
+            
+            ctx.font = '10px "Press Start 2P"';
+            ctx.fillText(this.type, this.x, this.y - 5);
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x;
+            this.y = y;
+            this.size = Math.random() * 3 + 1;
+            this.speedX = Math.random() * 4 - 2;
+            this.speedY = Math.random() * 4 - 2;
+            this.color = color;
+            this.life = 1; // Opacity
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            this.life -= 0.05;
+        }
+        draw() {
+            ctx.globalAlpha = this.life;
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.size, this.size);
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    function createParticles(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+            particles.push(new Particle(x, y, color));
+        }
+    }
+
+    // Collision Detection
+    function checkCollisions() {
+        // Bullets vs Enemies
+        bullets.forEach(bullet => {
+            enemies.forEach(enemy => {
+                if (!bullet.markedForDeletion && !enemy.markedForDeletion &&
+                    bullet.x < enemy.x + enemy.width &&
+                    bullet.x + bullet.width > enemy.x &&
+                    bullet.y < enemy.y + enemy.height &&
+                    bullet.y + bullet.height > enemy.y) {
+                    
+                    bullet.markedForDeletion = true;
+                    enemy.health--;
+                    if (enemy.health <= 0) {
+                        enemy.markedForDeletion = true;
+                        score += enemy.type === 'bottleneck' ? 50 : 20;
+                        createParticles(enemy.x, enemy.y, enemy.color, 10);
+                    } else {
+                        createParticles(enemy.x, enemy.y, '#fff', 2); // Hit effect
+                    }
+                }
+            });
+        });
+
+        // Player vs Enemies
+        enemies.forEach(enemy => {
+            if (!enemy.markedForDeletion &&
+                player.x < enemy.x + enemy.width &&
+                player.x + player.width > enemy.x &&
+                player.y < enemy.y + enemy.height &&
+                player.y + player.height > enemy.y) {
+                
+                enemy.markedForDeletion = true;
+                player.health -= 20;
+                createParticles(player.x, player.y, '#ff0000', 15);
+                // Shake effect could go here
+            }
+        });
+
+        // Player vs Powerups
+        powerups.forEach(p => {
+            if (!p.markedForDeletion &&
+                player.x < p.x + p.width &&
+                player.x + player.width > p.x &&
+                player.y < p.y + p.height &&
+                player.y + p.height > p.y) {
+                
+                p.markedForDeletion = true;
+                applyPowerup(p.type);
+            }
+        });
+    }
+
+    function applyPowerup(type) {
+        createParticles(player.x, player.y, '#ffffff', 10);
+        if (type === 'RAM') {
+            // Faster fire rate
+            player.ramBoostTimer = 300; // 5 seconds approx
+            score += 50;
+        } else if (type === 'ENERGY') {
+            player.health = Math.min(player.health + 25, 100);
+            score += 10;
+        } else if (type === 'SSD') {
+            // Nuke screen
+            enemies.forEach(e => {
+                e.markedForDeletion = true;
+                createParticles(e.x, e.y, '#00ffff', 5);
+            });
+            score += 100;
+            // Draw flash
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillRect(0,0,width,height);
+        }
+    }
+
+    // Main Loop
+    function update() {
+        if (!gameRunning) return;
+
+        // Player Movement
+        if (keys.ArrowLeft && player.x > 0) player.x -= player.speed;
+        if (keys.ArrowRight && player.x < width - player.width) player.x += player.speed;
+        
+        // Touch Follow
+        if (touchX !== null) {
+            const center = player.x + player.width/2;
+            if (Math.abs(touchX - center) > 5) {
+                if (touchX < center && player.x > 0) player.x -= player.speed;
+                if (touchX > center && player.x < width - player.width) player.x += player.speed;
+            }
+        }
+
+        // Shooting Logic
+        let fireRate = player.ramBoostTimer > 0 ? 10 : 25;
+        if (player.ramBoostTimer > 0) player.ramBoostTimer--;
+
+        if (frames % fireRate === 0) {
+            // Shoot PCI-e packets
+            bullets.push(new Bullet(player.x + player.width/2 - 2, player.y, player.ramBoostTimer > 0));
+        }
+
+        // Spawning
+        if (frames % 60 === 0) {
+            enemies.push(new Enemy());
+        }
+        if (frames % 400 === 0) { // Rare powerups
+            powerups.push(new PowerUp());
+        }
+
+        // Update Entities
+        bullets.forEach(b => b.update());
+        enemies.forEach(e => e.update());
+        powerups.forEach(p => p.update());
+        particles.forEach(p => p.update());
+
+        // Cleanup
+        bullets = bullets.filter(b => !b.markedForDeletion);
+        enemies = enemies.filter(e => !e.markedForDeletion);
+        powerups = powerups.filter(p => !p.markedForDeletion);
+        particles = particles.filter(p => p.life > 0);
+
+        checkCollisions();
+
+        // Game Over Check
+        if (player.health <= 0) {
+            gameOver();
+        }
+
+        // Traces Animation
+        traces.forEach(t => {
+            t.y += t.speed;
+            if (t.y > height) t.y = -t.h;
+        });
+
+        frames++;
+        
+        // UI Update
+        scoreEl.innerText = score;
+        healthEl.innerText = player.health;
+        ramEl.innerText = Math.ceil(player.ramBoostTimer / 60);
+        
+        // Color based on health
+        if (player.health > 50) healthEl.style.color = '#00ff00';
+        else if (player.health > 25) healthEl.style.color = '#ffff00';
+        else healthEl.style.color = '#ff0000';
+    }
+
+    function draw() {
+        // Clear background
+        ctx.fillStyle = '#0f380f';
+        ctx.fillRect(0, 0, width, height);
+
+        // Draw Circuit Traces (Background)
+        ctx.fillStyle = '#1f4f1f';
+        traces.forEach(t => {
+            ctx.fillRect(t.x, t.y, t.w, t.h);
+        });
+
+        // Draw Player (CPU Socket)
+        ctx.fillStyle = '#555'; // Socket base
+        ctx.fillRect(player.x - 2, player.y - 2, player.width + 4, player.height + 4);
+        
+        ctx.fillStyle = player.color; // CPU Heatspreader
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+        
+        // Draw CPU Pins effect
+        ctx.fillStyle = '#gold';
+        ctx.fillRect(player.x + 5, player.y + 5, player.width - 10, player.height - 10);
+        
+        // Draw Text "CPU" on player
+        ctx.fillStyle = '#000';
+        ctx.font = '10px Arial';
+        ctx.fillText("CPU", player.x + 8, player.y + 25);
+
+        // Entities
+        powerups.forEach(p => p.draw());
+        bullets.forEach(b => b.draw());
+        enemies.forEach(e => e.draw());
+        particles.forEach(p => p.draw());
+
+        if (gameRunning) {
+            requestAnimationFrame(draw);
+            update();
+        }
+    }
+
+    function startGame() {
+        gameRunning = true;
+        score = 0;
+        frames = 0;
+        player.health = 100;
+        player.ramBoostTimer = 0;
+        bullets = [];
+        enemies = [];
+        powerups = [];
+        particles = [];
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+        resize();
+        draw();
+    }
+
+    function gameOver() {
+        gameRunning = false;
+        finalScoreEl.innerText = score;
+        gameOverScreen.classList.remove('hidden');
+    }
+
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
+    window.addEventListener('resize', resize);
+    
+    // Init
+    resize();
+
+</script>
+</body>
+</html>
