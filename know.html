@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saber y Ganar - English 3º ESO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Roboto:wght@300;400;700;900&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1100px;
+            background-color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 40px rgba(0,0,0,0.1);
+        }
+
+        /* BARRA SUPERIOR NEGRA */
+        .top-nav {
+            background-color: #000000;
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .author-name {
+            font-family: 'Times New Roman', serif;
+            font-weight: bold;
+            font-size: 16px;
+            letter-spacing: 1px;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+
+        /* BANNER 3 ESO */
+        .top-banner {
+            background-color: #2c3e3a;
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .top-banner h1 {
+            font-family: 'Times New Roman', serif;
+            font-size: 80px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            margin: 0;
+        }
+
+        /* ZONA NARANJA */
+        .orange-zone {
+            background: linear-gradient(180deg, #e67e22 0%, #d35400 100%);
+            flex-grow: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        /* BOTÓN HOME CON CASITA */
+        .home-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            z-index: 100;
+            transition: background 0.2s;
+        }
+        .home-button:hover { background-color: rgba(0,0,0,0.5); }
+
+        .title-frame {
+            border: 4px solid white;
+            padding: 10px 40px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .title-text {
+            font-family: 'Oswald', sans-serif;
+            font-size: 50px;
+            font-weight: 700;
+            font-style: italic;
+            color: white;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        /* MARCADORES */
+        .team-card {
+            background-color: #3b2015;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 145px;
+            border-bottom: 6px solid transparent;
+        }
+        .team-card.active {
+            transform: scale(1.05);
+            background-color: #4d2b1d;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .score-display { font-size: 36px; font-weight: 900; margin-top: 5px; }
+
+        .border-team-a { border-bottom-color: #3b82f6; }
+        .border-team-b { border-bottom-color: #fbbf24; }
+        .border-team-c { border-bottom-color: #10b981; }
+        .border-team-d { border-bottom-color: #8b5cf6; }
+        .border-team-e { border-bottom-color: #ec4899; }
+
+        /* PANEL CENTRAL MARRÓN */
+        .game-panel {
+            background-color: #8c4a22;
+            border-radius: 30px;
+            width: 100%;
+            max-width: 950px;
+            padding: 50px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 4px 25px rgba(0,0,0,0.5);
+        }
+
+        .timer-badge {
+            background-color: #2563eb;
+            color: white;
+            padding: 8px 35px;
+            border-radius: 30px;
+            font-size: 26px;
+            font-weight: 900;
+            margin-bottom: 20px;
+        }
+
+        .btn-teacher-ok { background-color: #10b981; color: white; padding: 15px 40px; border-radius: 12px; font-weight: 900; font-size: 18px; text-transform: uppercase; box-shadow: 0 4px 0 #065f46; }
+        .btn-teacher-wrong { background-color: #ef4444; color: white; padding: 15px 40px; border-radius: 12px; font-weight: 900; font-size: 18px; text-transform: uppercase; box-shadow: 0 4px 0 #991b1b; }
+        .btn-teacher-ok:active, .btn-teacher-wrong:active { transform: translateY(2px); box-shadow: 0 2px 0 transparent; }
+
+        /* MODAL */
+        #custom-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+        }
+    </style>
+</head>
+<body>
+
+<div id="custom-modal">
+    <div class="modal-content">
+        <h3 id="modal-title" class="text-2xl font-black mb-4 uppercase text-gray-800">Mensaje</h3>
+        <p id="modal-text" class="text-gray-600 mb-8 font-medium italic">Texto aquí...</p>
+        <button onclick="closeModal()" class="bg-blue-600 text-white px-10 py-3 rounded-full font-black uppercase">Aceptar</button>
+    </div>
+</div>
+
+<div class="app-container">
+    <nav class="top-nav">
+        <div class="author-name">PHD MAITE SILVA ROS</div>
+        <div class="flex items-center gap-4 opacity-50 font-bold text-[10px] uppercase">
+            <span>Home</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+    </nav>
+
+    <div class="top-banner">
+        <h1>3 ESO</h1>
+    </div>
+
+    <div class="orange-zone">
+        <!-- BOTÓN HOME CON ICONO DE CASITA -->
+        <button onclick="goHome()" class="home-button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+            </svg>
+            HOME
+        </button>
+
+        <div class="title-frame">
+            <span class="title-text">SABER Y GANAR</span>
+        </div>
+        <div class="text-white text-xs font-black tracking-[0.4em] uppercase mb-4">Know and Win</div>
+
+        <div id="timer" class="timer-badge hidden">120s</div>
+
+        <!-- Marcadores -->
+        <div class="grid grid-cols-5 gap-3 w-full mb-8">
+            <div id="card-A" class="team-card active border-team-a" onclick="selectTeam('A')">
+                <div class="text-[9px] font-black uppercase opacity-40">Team A</div>
+                <div id="score-A" class="score-display">0</div>
+            </div>
+            <div id="card-B" class="team-card border-team-b" onclick="selectTeam('B')">
+                <div class="text-[9px] font-black uppercase opacity-40">Team B</div>
+                <div id="score-B" class="score-display">0</div>
+            </div>
+            <div id="card-C" class="team-card border-team-c" onclick="selectTeam('C')">
+                <div class="text-[9px] font-black uppercase opacity-40">Team C</div>
+                <div id="score-C" class="score-display">0</div>
+            </div>
+            <div id="card-D" class="team-card border-team-d" onclick="selectTeam('D')">
+                <div class="text-[9px] font-black uppercase opacity-40">Team D</div>
+                <div id="score-D" class="score-display">0</div>
+            </div>
+            <div id="card-E" class="team-card border-team-e" onclick="selectTeam('E')">
+                <div class="text-[9px] font-black uppercase opacity-40">Team E</div>
+                <div id="score-E" class="score-display">0</div>
+            </div>
+        </div>
+
+        <!-- Menú Principal -->
+        <div id="menu" class="game-panel">
+            <h2 class="text-white text-3xl font-black italic uppercase mb-12 tracking-widest">Select a Game</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full px-6">
+                <button onclick="startGame(1)" class="bg-[#1a2537] p-8 rounded-2xl text-left border border-white/5 hover:bg-[#233149] transition">
+                    <h3 class="text-blue-400 font-black text-xl mb-1 uppercase">1. Every Wise Person...</h3>
+                    <p class="text-gray-400 text-[10px] italic">Preguntas rápidas (2 min.)</p>
+                </button>
+                <button onclick="startGame(2)" class="bg-[#1a2537] p-8 rounded-2xl text-left border border-white/5 hover:bg-[#233149] transition">
+                    <h3 class="text-orange-400 font-black text-xl mb-1 uppercase">2. Hot Question</h3>
+                    <p class="text-gray-400 text-[10px] italic">Irlanda y Unidades 1-3</p>
+                </button>
+                <button onclick="startGame(3)" class="bg-[#1a2537] p-8 rounded-2xl text-left border border-white/5 hover:bg-[#233149] transition">
+                    <h3 class="text-emerald-400 font-black text-xl mb-1 uppercase">3. The Challenge</h3>
+                    <p class="text-gray-400 text-[10px] italic">Adivina la palabra oculta</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- Juego -->
+        <div id="game-view" class="game-panel hidden">
+            <div id="q-box" class="w-full text-center">
+                <div class="flex justify-between w-full mb-6 border-b border-white/10 pb-3">
+                    <span id="game-title-badge" class="bg-black/30 text-white text-[9px] px-3 py-1 rounded font-black uppercase">GAME</span>
+                    <span id="q-counter" class="text-white/40 font-bold uppercase text-[9px]">Question 1</span>
+                </div>
+                <h3 id="question-text" class="text-white text-4xl font-black mb-12 px-6 leading-tight">Cargando...</h3>
+                
+                <div class="grid grid-cols-2 gap-6 mb-8" id="options-grid"></div>
+
+                <div id="teacher-val" class="hidden flex flex-col items-center">
+                    <div class="flex gap-10">
+                        <button onclick="resolve(true)" class="btn-teacher-ok">Correct (+)</button>
+                        <button onclick="resolve(false)" class="btn-teacher-wrong">Wrong (-)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Robo de Puntos -->
+            <div id="robbery-view" class="w-full text-center hidden">
+                <h2 class="text-emerald-400 text-5xl font-black italic mb-4">CORRECT!</h2>
+                <p class="text-white/80 text-xl mb-10 uppercase font-bold">Choose your move:</p>
+                <div class="grid grid-cols-3 gap-6">
+                    <button onclick="openTarget('GIVE')" class="bg-emerald-500 text-white p-6 rounded-xl font-black uppercase">Regalar +20</button>
+                    <button onclick="openTarget('TAKE')" class="bg-red-600 text-white p-6 rounded-xl font-black uppercase">Quitar -20</button>
+                    <button onclick="openTarget('STEAL')" class="bg-blue-600 text-white p-6 rounded-xl font-black uppercase">Robar +20</button>
+                </div>
+            </div>
+
+            <!-- Destino del Robo -->
+            <div id="target-view" class="w-full text-center hidden">
+                <h2 class="text-white text-3xl font-black italic mb-10 uppercase">Select Target:</h2>
+                <div class="grid grid-cols-5 gap-4" id="target-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-white p-4 text-center text-[10px] font-black text-gray-400 tracking-[0.4em] uppercase">
+        IES Almenara • English Department • Vélez-Málaga
+    </footer>
+</div>
+
+<script>
+    let scores = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+    let currentTeam = 'A';
+    let currentIdx = 0;
+    let currentMode = 1;
+    let timer;
+    let actionType = '';
+
+    const content = {
+        1: { title: "Every Wise Person", time: 120, pts: 20, isAuto: true, questions: [
+            { q: "Unit 1: A person who is very tidy and organized.", opts: ["Messy", "Neat"], ok: 1 },
+            { q: "Unit 2: Someone who doesn't like working at all.", opts: ["Lazy", "Hard-working"], ok: 0 },
+            { q: "Unit 1: Nervous around other people.", opts: ["Shy", "Outgoing"], ok: 0 },
+            { q: "Unit 3: To travel by asking for free rides in cars.", opts: ["Sightsee", "Hitchhike"], ok: 1 }
+        ]},
+        2: { title: "Hot Question", time: 90, pts: 30, isAuto: false, questions: [
+            { q: "Ireland: What is the capital of the Republic of Ireland?" },
+            { q: "Grammar: Give an example of 'YET' in Present Perfect." },
+            { q: "Ireland: Who is the patron saint of Ireland?" }
+        ]},
+        3: { title: "The Challenge", time: 60, pts: 50, isAuto: false, questions: [
+            { q: "H _ _ _ _ _ _ E : A continuous pain in your head." },
+            { q: "B _ _ _ Y : Someone who tells others what to do." },
+            { q: "C _ _ _ _ _ _ _ L : A very large church." }
+        ]}
+    };
+
+    function showModal(t, m) {
+        document.getElementById('modal-title').innerText = t;
+        document.getElementById('modal-text').innerText = m;
+        document.getElementById('custom-modal').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
+
+    function goHome() {
+        clearInterval(timer);
+        document.getElementById('menu').classList.remove('hidden');
+        document.getElementById('game-view').classList.add('hidden');
+        document.getElementById('timer').classList.add('hidden');
+    }
+
+    function selectTeam(id) {
+        currentTeam = id;
+        document.querySelectorAll('.team-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`card-${id}`).classList.add('active');
+    }
+
+    function startGame(m) {
+        currentMode = m; currentIdx = 0;
+        document.getElementById('menu').classList.add('hidden');
+        document.getElementById('game-view').classList.remove('hidden');
+        document.getElementById('timer').classList.remove('hidden');
+        loadQuestion();
+        startTimer(content[m].time);
+    }
+
+    function loadQuestion() {
+        const config = content[currentMode];
+        if (currentIdx >= config.questions.length) {
+            clearInterval(timer);
+            showModal("Ronda Terminada", "¡Buen trabajo!");
+            goHome();
+            return;
+        }
+
+        document.getElementById('q-box').classList.remove('hidden');
+        document.getElementById('robbery-view').classList.add('hidden');
+        document.getElementById('target-view').classList.add('hidden');
+
+        const data = config.questions[currentIdx];
+        document.getElementById('game-title-badge').innerText = config.title;
+        document.getElementById('q-counter').innerText = `Question ${currentIdx + 1} / ${config.questions.length}`;
+        document.getElementById('question-text').innerText = data.q;
+
+        const grid = document.getElementById('options-grid');
+        const teacher = document.getElementById('teacher-val');
+        grid.innerHTML = '';
+        
+        if (config.isAuto) {
+            teacher.classList.add('hidden');
+            data.opts.forEach((o, i) => {
+                const b = document.createElement('button');
+                b.className = "bg-[#1a2537] text-white p-6 rounded-xl font-bold border-b-4 border-black active:translate-y-1";
+                b.innerText = o;
+                b.onclick = () => { if(i === data.ok) resolve(true); else resolve(false); };
+                grid.appendChild(b);
+            });
+        } else {
+            teacher.classList.remove('hidden');
+        }
+    }
+
+    function resolve(ok) {
+        if (ok) {
+            scores[currentTeam] += content[currentMode].pts;
+            updateUI();
+            if (currentMode === 1) {
+                document.getElementById('q-box').classList.add('hidden');
+                document.getElementById('robbery-view').classList.remove('hidden');
+            } else { nextQuestion(); }
+        } else {
+            scores[currentTeam] -= 10;
+            updateUI();
+            nextQuestion();
+        }
+    }
+
+    function openTarget(type) {
+        actionType = type;
+        document.getElementById('robbery-view').classList.add('hidden');
+        document.getElementById('target-view').classList.remove('hidden');
+        const grid = document.getElementById('target-grid');
+        grid.innerHTML = '';
+        ['A','B','C','D','E'].forEach(t => {
+            if (type !== 'GIVE' && t === currentTeam) return;
+            const b = document.createElement('button');
+            b.className = `bg-[#3b2015] text-white p-4 rounded-lg font-black border-b-4 border-team-${t.toLowerCase()}`;
+            b.innerText = `Team ${t}`;
+            b.onclick = () => {
+                if(type === 'GIVE') scores[t] += 20;
+                else if(type === 'TAKE') scores[t] -= 20;
+                else { scores[t] -= 20; scores[currentTeam] += 20; }
+                updateUI();
+                nextQuestion();
+            };
+            grid.appendChild(b);
+        });
+    }
+
+    function nextQuestion() { currentIdx++; setTimeout(loadQuestion, 400); }
+
+    function updateUI() {
+        for (let t in scores) document.getElementById(`score-${t}`).innerText = scores[t];
+    }
+
+    function startTimer(s) {
+        let count = s;
+        document.getElementById('timer').innerText = count + 's';
+        clearInterval(timer);
+        timer = setInterval(() => {
+            count--;
+            document.getElementById('timer').innerText = count + 's';
+            if (count <= 0) { clearInterval(timer); showModal("TIEMPO AGOTADO", "Fin de la ronda."); goHome(); }
+        }, 1000);
+    }
+</script>
+
+</body>
+</html>
