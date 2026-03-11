@@ -2,69 +2,611 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Presupuesto con Salida</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Práctica de Presupuesto Familiar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f0f5f9; margin: 0; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         
-        /* Botón X flotante */
-        .btn-cerrar {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 9999;
-            background: #1e293b;
-            color: white;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f5f9;
+            color: #1e293b;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero-banner {
+            width: 100%;
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=2000');
+            background-size: cover;
+            background-position: center;
+            height: 180px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            border: 2px solid white;
-            cursor: pointer;
+            border-bottom: 6px solid #facc15;
+        }
+
+        .hero-title {
+            color: white;
+            font-size: 3rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            text-align: center;
+        }
+
+        .sidebar-container {
+            background-color: white;
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 20px;
+        }
+
+        .sidebar-header {
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .concept-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin: 6px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #334155;
+            user-select: none;
+        }
+
+        .concept-card:active { cursor: grabbing; }
+        .concept-card:hover { border-color: #3b82f6; background-color: #f8fafc; transform: translateY(-1px); }
+        .concept-card.selected { border: 2px solid #3b82f6; background-color: #eff6ff; }
+        .concept-card.dragging { opacity: 0.5; border-style: dashed; }
+
+        .amount-display, .concept-name {
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: text;
+            transition: background 0.2s;
+        }
+        .amount-display { font-weight: 800; color: #000; margin-left: 10px; }
+        .concept-name { flex-grow: 1; }
+        
+        .amount-display:hover, .concept-name:hover { background: #f1f5f9; }
+
+        .edit-input {
+            font-family: inherit;
+            font-size: inherit;
+            border: 1px solid #3b82f6;
+            border-radius: 4px;
+            padding: 2px 4px;
+            outline: none;
+            background: white;
+        }
+        .name-input { width: 100%; font-weight: 500; }
+        .amount-input { width: 70px; font-weight: 800; text-align: right; color: #3b82f6; }
+
+        .concept-card.correct { border: 2px solid #10b981 !important; background-color: #f0fdf4 !important; }
+        .concept-card.incorrect { border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; }
+
+        .drop-category {
+            background-color: white;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        .drop-category.drag-over {
+            border: 2px dashed #3b82f6;
+            background-color: #f0f7ff;
+            transform: scale(1.01);
+        }
+
+        .category-head {
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 800;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            border-top-left-radius: 11px;
+            border-top-right-radius: 11px;
+        }
+
+        .drop-area {
+            flex-grow: 1;
+            padding: 10px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-height: 50px;
+        }
+
+        .help-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 80%;
+            pointer-events: none;
+        }
+
+        .results-dark-panel {
+            background-color: #1e293b;
+            color: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 2rem;
+            width: 100%;
+        }
+
+        .add-form {
+            padding: 12px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
         }
     </style>
 </head>
-<body>
+<body class="pb-20">
 
-    <button onclick="salir()" class="btn-cerrar">✕</button>
-
-    <div class="hero-banner bg-slate-800 text-white p-10 text-center border-b-4 border-yellow-400">
-        <h1 class="text-2xl font-black uppercase">Presupuesto Familiar</h1>
-        <p class="text-[10px] opacity-70">Usa la X para volver si te pierdes</p>
+    <div class="hero-banner">
+        <h1 class="hero-title">Presupuesto Familiar</h1>
     </div>
 
-    <div class="p-4 max-w-4xl mx-auto">
-        <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200">
-            <h2 class="font-bold mb-4">Panel de Control</h2>
-            <div class="grid gap-4">
-                <button onclick="newCase()" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold">NUEVO CASO</button>
-                <button onclick="validate()" class="w-full py-3 bg-blue-600 text-white rounded-lg font-bold">CORREGIR</button>
+    <div class="app-container p-6">
+        
+        <div class="bg-white rounded-2xl p-4 mb-6 flex flex-wrap justify-between items-center border border-slate-200 shadow-sm gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V5a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 leading-tight">Práctica de Finanzas</h2>
+                    <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Añade, edita y clasifica conceptos</p>
+                </div>
             </div>
+            <div class="flex gap-2">
+                <button onclick="newCase()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 text-xs transition-all shadow-md active:scale-95">
+                    Nuevo caso
+                </button>
+                <button id="checkBtn" onclick="validate()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center gap-2 text-xs transition-all shadow-lg shadow-blue-200 active:scale-95">
+                    Corregir Presupuesto
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <div class="lg:col-span-4">
+                <div class="sidebar-container shadow-sm">
+                    <div class="sidebar-header">
+                        <span class="text-blue-500 font-black text-xl">$</span>
+                        <span class="font-bold text-slate-500 text-[10px] uppercase tracking-widest">Bolsa de Conceptos (<span id="count">0</span>)</span>
+                    </div>
+                    
+                    <!-- Lista de Conceptos -->
+                    <div id="conceptList" class="py-2 min-h-[100px]" ondrop="drop(event, 'list')" ondragover="allowDrop(event)">
+                        <!-- Inyectado por JS -->
+                    </div>
+
+                    <!-- Formulario para Añadir -->
+                    <div class="add-form">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Añadir nuevo concepto</p>
+                        <div class="flex flex-col gap-2">
+                            <input id="newName" type="text" placeholder="Nombre (ej. Gimnasio)" class="text-xs p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-400">
+                            <div class="flex gap-2">
+                                <input id="newAmount" type="number" placeholder="€" class="text-xs p-2 border border-slate-200 rounded-lg w-20 outline-none focus:border-blue-400">
+                                <select id="newCat" class="text-xs p-2 border border-slate-200 rounded-lg flex-grow outline-none focus:border-blue-400">
+                                    <option value="1">Ingreso</option>
+                                    <option value="2">Ahorro</option>
+                                    <option value="3">Gasto Fijo</option>
+                                    <option value="4">Gasto Variable</option>
+                                    <option value="5">Gasto Ocio</option>
+                                </select>
+                            </div>
+                            <button onclick="addNewConcept()" class="w-full py-2 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-colors">AÑADIR A LA BOLSA</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <div class="drop-category" id="zone-1" ondrop="drop(event, 1)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                    <div class="category-head bg-emerald-50 text-emerald-700">
+                        <span>1. INGRESOS</span>
+                        <span class="font-black text-base" id="sum-1">0€</span>
+                    </div>
+                    <div id="cat-1" class="drop-area" onclick="moveTo(1)">
+                        <div class="help-placeholder text-center w-full mt-4 opacity-20">
+                            <p class="text-[10px] font-bold uppercase">Ingresos</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="drop-category" id="zone-2" ondrop="drop(event, 2)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                    <div class="category-head bg-blue-50 text-blue-700">
+                        <span>2. AHORRO PLANIFICADO</span>
+                        <span class="font-black text-base" id="sum-2">0€</span>
+                    </div>
+                    <div id="cat-2" class="drop-area" onclick="moveTo(2)">
+                        <div class="help-placeholder text-center w-full mt-4 opacity-20">
+                            <p class="text-[10px] font-bold uppercase">Ahorro</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="drop-category" id="zone-3" ondrop="drop(event, 3)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                    <div class="category-head bg-rose-50 text-rose-700">
+                        <span>3. GASTOS FIJOS OBLIGATORIOS</span>
+                        <span class="font-black text-base" id="sum-3">0€</span>
+                    </div>
+                    <div id="cat-3" class="drop-area" onclick="moveTo(3)">
+                        <div class="help-placeholder text-center w-full mt-4 opacity-20">
+                            <p class="text-[10px] font-bold uppercase">Obligatorios</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="drop-category" id="zone-4" ondrop="drop(event, 4)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                    <div class="category-head bg-orange-50 text-orange-700">
+                        <span>4. GASTOS VARIABLES NECESARIOS</span>
+                        <span class="font-black text-base" id="sum-4">0€</span>
+                    </div>
+                    <div id="cat-4" class="drop-area" onclick="moveTo(4)">
+                        <div class="help-placeholder text-center w-full mt-4 opacity-20">
+                            <p class="text-[10px] font-bold uppercase">Necesarios</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="drop-category md:col-span-2" id="zone-5" ondrop="drop(event, 5)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                    <div class="category-head bg-purple-50 text-purple-700">
+                        <span>5. GASTOS DISCRECIONALES (ESTILO DE VIDA)</span>
+                        <span class="font-black text-base" id="sum-5">0€</span>
+                    </div>
+                    <div id="cat-5" class="drop-area" onclick="moveTo(5)">
+                        <div class="help-placeholder text-center w-full mt-4 opacity-20">
+                            <p class="text-[10px] font-bold uppercase">Ocio y Estilo de vida</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="resultsPanel" class="lg:col-span-12 results-dark-panel hidden">
+                <div class="flex flex-wrap justify-between items-center mb-8 gap-4">
+                    <div>
+                        <h3 class="text-2xl font-black">Resumen del Presupuesto</h3>
+                        <p class="text-slate-400 text-sm">Estado de salud financiera</p>
+                    </div>
+                    <div id="badge" class="px-5 py-2 rounded-full font-black text-xs uppercase tracking-widest border border-slate-700 bg-slate-800"></div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
+                        <span class="text-slate-400 text-[9px] font-black uppercase tracking-widest block mb-1">Ingresos</span>
+                        <span id="res-in" class="text-2xl font-black text-emerald-400">0€</span>
+                    </div>
+                    <div class="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
+                        <span class="text-slate-400 text-[9px] font-black uppercase tracking-widest block mb-1">Gastos Totales</span>
+                        <span id="res-out" class="text-2xl font-black text-rose-400">0€</span>
+                    </div>
+                    <div class="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
+                        <span class="text-slate-400 text-[9px] font-black uppercase tracking-widest block mb-1">Ahorro</span>
+                        <span id="res-save" class="text-2xl font-black text-blue-400">0€</span>
+                    </div>
+                    <div class="bg-slate-900 p-6 rounded-xl border border-slate-600">
+                        <span class="text-slate-400 text-[9px] font-black uppercase tracking-widest block mb-1">Saldo Final</span>
+                        <span id="res-saldo" class="text-2xl font-black">0€</span>
+                    </div>
+                </div>
+
+                <div id="errorMsg" class="mt-6 flex flex-col gap-1 text-amber-300 font-bold text-sm hidden">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-width="2.5"></path></svg>
+                        <span>Atención: Revisa los elementos marcados en rojo.</span>
+                    </div>
+                    <div id="missingMsg" class="text-slate-400 text-[10px] font-normal italic ml-7"></div>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <script>
-        // Esta función intenta todas las formas de "salir" en iPhone
-        function salir() {
-            // 1. Intenta cerrar la pestaña actual
-            window.close();
-            
-            // 2. Si sigue ahí, intenta volver atrás en el historial
-            window.history.back();
-            
-            // 3. Si estás en Google Sites, esto ayuda a refrescar
-            console.log("Intentando salir...");
+        let concepts = [
+            { id: 1, name: "Cenas fuera (Restaurantes)", range: [40, 150], cat: 5 },
+            { id: 2, name: "Objetivo Ahorro (10%)", range: [100, 300], cat: 2 },
+            { id: 3, name: "Suscripción Netflix/Disney+", range: [10, 30], cat: 5 },
+            { id: 4, name: "Tabaco / Vicios", range: [30, 100], cat: 5 },
+            { id: 5, name: "Cuota Colegio Concertado", range: [100, 200], cat: 3 },
+            { id: 6, name: "Nómina Trabajo (Padre)", range: [1400, 2200], cat: 1 },
+            { id: 7, name: "Pensión Jubilación (Abuelo)", range: [800, 1200], cat: 1 },
+            { id: 8, name: "Factura de la Luz", range: [60, 160], cat: 3 },
+            { id: 9, name: "Alquiler Piso", range: [600, 950], cat: 3 },
+            { id: 10, name: "Gasolina / Transporte", range: [80, 220], cat: 4 },
+            { id: 11, name: "Compra Supermercado", range: [350, 600], cat: 4 }
+        ];
+
+        let selectedId = null;
+        let placement = {};
+
+        function newCase() {
+            // Limpiar visualmente
+            for(let i=1; i<=5; i++) {
+                const area = document.getElementById(`cat-${i}`);
+                area.querySelectorAll('.concept-card').forEach(card => card.remove());
+            }
+
+            placement = {};
+            selectedId = null;
+            document.getElementById('resultsPanel').classList.add('hidden');
+            document.getElementById('errorMsg').classList.add('hidden');
+
+            // Recalcular montos aleatorios solo para los que tienen rango
+            concepts.forEach(c => {
+                if(c.range) c.amount = Math.floor(Math.random() * (c.range[1] - c.range[0] + 1)) + c.range[0];
+            });
+
+            init();
+            refreshPlaceholders();
+            updateSums();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // Simulación de funciones para que no de error
-        function newCase() { alert("Nuevo caso generado"); }
-        function validate() { alert("Presupuesto corregido"); }
+        function init() {
+            const list = document.getElementById('conceptList');
+            list.innerHTML = "";
+            
+            // Solo mostrar los que no están colocados
+            const unplaced = concepts.filter(c => !placement[c.id]);
+            document.getElementById('count').innerText = unplaced.length;
+
+            unplaced.forEach(c => {
+                list.appendChild(createCard(c));
+            });
+        }
+
+        function createCard(c) {
+            const div = document.createElement('div');
+            div.className = "concept-card shadow-sm";
+            div.id = `c-${c.id}`;
+            div.draggable = true;
+            
+            div.innerHTML = `
+                <span class="concept-name" id="name-${c.id}" onclick="editField(event, ${c.id}, 'name')">${c.name}</span>
+                <span class="amount-display" id="amt-${c.id}" onclick="editField(event, ${c.id}, 'amount')">${c.amount}€</span>
+            `;
+            
+            div.onclick = (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    e.stopPropagation();
+                    select(c.id);
+                }
+            };
+
+            div.ondragstart = (e) => {
+                if (e.target.tagName === 'INPUT') { e.preventDefault(); return; }
+                e.dataTransfer.setData("text", c.id);
+                div.classList.add('dragging');
+                selectedId = null;
+            };
+            div.ondragend = () => div.classList.remove('dragging');
+            return div;
+        }
+
+        function editField(e, id, field) {
+            e.stopPropagation();
+            const display = e.currentTarget;
+            const concept = concepts.find(c => c.id === id);
+            
+            const input = document.createElement('input');
+            input.type = field === 'amount' ? 'number' : 'text';
+            input.value = concept[field];
+            input.className = `edit-input ${field === 'amount' ? 'amount-input' : 'name-input'}`;
+            
+            const finishEdit = () => {
+                let newVal = input.value;
+                if(field === 'amount') newVal = parseInt(newVal) || 0;
+                
+                concept[field] = newVal;
+                display.innerText = field === 'amount' ? newVal + '€' : newVal;
+                updateSums();
+                if (!document.getElementById('resultsPanel').classList.contains('hidden')) validate(); 
+            };
+
+            input.onblur = finishEdit;
+            input.onkeydown = (ev) => { if (ev.key === 'Enter') finishEdit(); };
+            
+            display.innerText = "";
+            display.appendChild(input);
+            input.focus();
+            input.select();
+        }
+
+        function addNewConcept() {
+            const name = document.getElementById('newName').value.trim();
+            const amount = parseInt(document.getElementById('newAmount').value);
+            const cat = parseInt(document.getElementById('newCat').value);
+
+            if(!name || isNaN(amount)) return;
+
+            const newObj = {
+                id: Date.now(), // ID único basado en tiempo
+                name: name,
+                amount: amount,
+                cat: cat
+            };
+
+            concepts.push(newObj);
+            document.getElementById('newName').value = "";
+            document.getElementById('newAmount').value = "";
+            
+            init(); // Refrescar lista lateral
+        }
+
+        function select(id) {
+            if (selectedId) document.getElementById(`c-${selectedId}`)?.classList.remove('selected');
+            if (selectedId === id) {
+                selectedId = null;
+            } else {
+                selectedId = id;
+                document.getElementById(`c-${id}`)?.classList.add('selected');
+            }
+        }
+
+        function allowDrop(e) {
+            e.preventDefault();
+            const zone = e.currentTarget;
+            if (zone.classList.contains('drop-category')) zone.classList.add('drag-over');
+        }
+
+        function dragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function drop(e, targetId) {
+            e.preventDefault();
+            const id = e.dataTransfer.getData("text");
+            e.currentTarget.classList.remove('drag-over');
+            
+            if (targetId === 'list') returnBack(id);
+            else executeMove(id, targetId);
+        }
+
+        function executeMove(id, catId) {
+            const el = document.getElementById(`c-${id}`);
+            if (!el) return;
+            const targetArea = document.getElementById(`cat-${catId}`);
+            targetArea.appendChild(el);
+            placement[id] = parseInt(catId);
+            el.classList.remove('selected', 'correct', 'incorrect');
+            refreshPlaceholders();
+            updateSums();
+            checkSidebarEmpty();
+        }
+
+        function returnBack(id) {
+            const el = document.getElementById(`c-${id}`);
+            if (!el) return;
+            document.getElementById('conceptList').appendChild(el);
+            delete placement[id];
+            el.classList.remove('correct', 'incorrect', 'selected');
+            refreshPlaceholders();
+            updateSums();
+            checkSidebarEmpty();
+        }
+
+        function moveTo(catId) {
+            if (selectedId) {
+                executeMove(selectedId, catId);
+                selectedId = null;
+            }
+        }
+
+        function refreshPlaceholders() {
+            for(let i=1; i<=5; i++) {
+                const area = document.getElementById(`cat-${i}`);
+                const items = area.querySelectorAll('.concept-card').length;
+                area.querySelector('.help-placeholder').style.display = items > 0 ? 'none' : 'block';
+            }
+        }
+
+        function updateSums() {
+            let totals = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            for (let id in placement) {
+                const c = concepts.find(x => x.id == id);
+                if (c) totals[placement[id]] += (parseInt(c.amount) || 0);
+            }
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById(`sum-${i}`).innerText = `${totals[i]}€`;
+            }
+        }
+
+        function checkSidebarEmpty() {
+            const remaining = document.getElementById('conceptList').querySelectorAll('.concept-card').length;
+            document.getElementById('count').innerText = remaining;
+        }
+
+        function validate() {
+            let hits = 0;
+            let tin = 0; let tout = 0; let tsave = 0;
+            let missingCount = 0;
+
+            concepts.forEach(c => {
+                const el = document.getElementById(`c-${c.id}`);
+                const val = parseInt(c.amount) || 0;
+
+                if (placement[c.id]) {
+                    const isCorrect = placement[c.id] === c.cat;
+                    el.classList.remove('correct', 'incorrect');
+                    el.classList.add(isCorrect ? 'correct' : 'incorrect');
+                    if (isCorrect) hits++;
+
+                    if (placement[c.id] === 1) tin += val;
+                    else if (placement[c.id] === 2) tsave += val;
+                    else tout += val;
+                } else {
+                    missingCount++;
+                }
+            });
+
+            const saldo = tin - tout - tsave;
+            document.getElementById('resultsPanel').classList.remove('hidden');
+            document.getElementById('res-in').innerText = `${tin}€`;
+            document.getElementById('res-out').innerText = `-${tout}€`;
+            document.getElementById('res-save').innerText = `-${tsave}€`;
+            document.getElementById('res-saldo').innerText = `${saldo}€`;
+            document.getElementById('res-saldo').className = `text-2xl font-black ${saldo >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+            const badge = document.getElementById('badge');
+            badge.innerText = saldo >= 0 ? 'SUPERÁVIT' : 'DÉFICIT';
+            badge.className = `px-5 py-2 rounded-full font-black text-xs uppercase tracking-widest border ${saldo >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'}`;
+
+            const errPanel = document.getElementById('errorMsg');
+            const missMsg = document.getElementById('missingMsg');
+            
+            if (hits < (concepts.length - missingCount) || missingCount > 0) {
+                errPanel.classList.remove('hidden');
+                missMsg.innerText = missingCount > 0 ? `* Te faltan ${missingCount} conceptos por clasificar.` : "";
+            } else {
+                errPanel.classList.add('hidden');
+            }
+
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        window.onload = newCase;
     </script>
 </body>
 </html>
