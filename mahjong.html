@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mahjong Químico Soluble</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --tile-width: 75px;
+            --tile-height: 100px;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f1f5f9;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Contenedor principal que ocupa todo el espacio restante */
+        .game-container {
+            flex-grow: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* El área de juego donde se dibujan las fichas */
+        .game-area {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            perspective: 1200px;
+        }
+
+        .tile {
+            position: absolute;
+            width: var(--tile-width);
+            height: var(--tile-height);
+            background: #ffffff;
+            color: #1e293b;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 
+                -1px 1px 0 #cbd5e1,
+                -2px 2px 0 #cbd5e1,
+                -3px 3px 0 #94a3b8,
+                -4px 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            user-select: none;
+            border: 1px solid #e2e8f0;
+            /* Asegura que el punto de transformación sea el centro */
+            transform-origin: center center;
+        }
+
+        .tile:hover:not(.blocked) {
+            transform: translate(calc(-50% + 3px), calc(-50% - 3px)) scale(1.05) !important;
+            z-index: 1000 !important;
+            box-shadow: -10px 10px 20px rgba(0,0,0,0.4);
+        }
+
+        .tile.selected {
+            background: #eff6ff;
+            border: 3px solid #3b82f6;
+            transform: translate(calc(-50% + 5px), calc(-50% - 5px)) scale(1.05) !important;
+            z-index: 1001 !important;
+        }
+
+        .tile.blocked {
+            filter: grayscale(0.4) brightness(0.7);
+            cursor: not-allowed;
+        }
+
+        .tile-symbol {
+            font-size: 1.6rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .tile-number {
+            font-size: 0.7rem;
+            position: absolute;
+            top: 4px;
+            left: 6px;
+            font-weight: bold;
+            color: #64748b;
+        }
+
+        .tile-name {
+            font-size: 0.6rem;
+            font-weight: 700;
+            margin-top: 4px;
+            text-align: center;
+            padding: 0 2px;
+        }
+
+        .category-tag {
+            font-size: 0.5rem;
+            text-transform: uppercase;
+            padding: 1px 4px;
+            border-radius: 3px;
+            margin-top: 4px;
+            font-weight: bold;
+        }
+
+        /* Colores Categorías */
+        .cat-noble { background: #dcfce7; color: #166534; }
+        .cat-alkali { background: #fee2e2; color: #991b1b; }
+        .cat-halogen { background: #fef3c7; color: #92400e; }
+        .cat-nonmetal { background: #f3e8ff; color: #6b21a8; }
+        .cat-transition { background: #e0f2fe; color: #075985; }
+
+        .overlay {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="max-w-4xl mx-auto w-full p-4 shrink-0">
+        <div class="flex items-center justify-between bg-slate-800/80 p-4 rounded-2xl border border-slate-700 shadow-2xl">
+            <div class="text-left">
+                <h1 class="text-xl font-black text-blue-400 leading-none">CHEMISTRY MAHJONG</h1>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Garantía de Solubilidad Activada</p>
+            </div>
+            <div class="flex gap-6">
+                <div class="text-center">
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase">Parejas</span>
+                    <span id="score" class="text-xl font-mono font-bold text-white">0</span>
+                </div>
+                <div class="text-center">
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase">Fichas</span>
+                    <span id="tile-count" class="text-xl font-mono font-bold text-emerald-400">0</span>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="initGame()" class="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-900/40">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor que centra el escenario -->
+    <div class="game-container">
+        <div class="game-area" id="board"></div>
+    </div>
+
+    <div id="win-screen" class="hidden fixed inset-0 overlay z-[2000] flex items-center justify-center">
+        <div class="text-center">
+            <h2 class="text-6xl font-black text-white mb-4 italic">¡VICTORIA!</h2>
+            <p class="text-blue-400 text-xl mb-8">Has dominado la tabla periódica.</p>
+            <button onclick="initGame()" class="bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-2xl font-black text-lg shadow-xl">NUEVA PARTIDA</button>
+        </div>
+    </div>
+
+    <script>
+        const elementsDB = [
+            { s: 'H', n: 1, name: 'Hidrógeno', cat: 'nonmetal', catName: 'No Metal' },
+            { s: 'He', n: 2, name: 'Helio', cat: 'noble', catName: 'Gas Noble' },
+            { s: 'Li', n: 3, name: 'Litio', cat: 'alkali', catName: 'Alcalino' },
+            { s: 'Be', n: 4, name: 'Berilio', cat: 'alkali', catName: 'Alcalinotérreo' },
+            { s: 'B', n: 5, name: 'Boro', cat: 'nonmetal', catName: 'Metaloide' },
+            { s: 'C', n: 6, name: 'Carbono', cat: 'nonmetal', catName: 'No Metal' },
+            { s: 'N', n: 7, name: 'Nitrógeno', cat: 'nonmetal', catName: 'No Metal' },
+            { s: 'O', n: 8, name: 'Oxígeno', cat: 'nonmetal', catName: 'No Metal' },
+            { s: 'F', n: 9, name: 'Flúor', cat: 'halogen', catName: 'Halógeno' },
+            { s: 'Ne', n: 10, name: 'Neón', cat: 'noble', catName: 'Gas Noble' },
+            { s: 'Na', n: 11, name: 'Sodio', cat: 'alkali', catName: 'Alcalino' },
+            { s: 'Mg', n: 12, name: 'Magnesio', cat: 'alkali', catName: 'Alcalinotérreo' },
+            { s: 'Al', n: 13, name: 'Aluminio', cat: 'transition', catName: 'Metal' },
+            { s: 'Fe', n: 26, name: 'Hierro', cat: 'transition', catName: 'Transición' },
+            { s: 'Cu', n: 29, name: 'Cobre', cat: 'transition', catName: 'Transición' },
+            { s: 'Au', n: 79, name: 'Oro', cat: 'transition', catName: 'Transición' },
+            { s: 'Ag', n: 47, name: 'Plata', cat: 'transition', catName: 'Transición' },
+            { s: 'Zn', n: 30, name: 'Zinc', cat: 'transition', catName: 'Transición' },
+            { s: 'K', n: 19, name: 'Potasio', cat: 'alkali', catName: 'Alcalino' },
+            { s: 'Ca', n: 20, name: 'Calcio', cat: 'alkali', catName: 'Alcalinotérreo' }
+        ];
+
+        let selectedTile = null;
+        let pairsCount = 0;
+
+        function getLayout() {
+            const l = [];
+            // Capa 0 (Base): 8x5
+            for(let r=0; r<5; r++) {
+                for(let c=0; c<8; c++) {
+                    l.push({z:0, r, c});
+                }
+            }
+            // Capa 1: 6x3 centrada
+            for(let r=1; r<4; r++) {
+                for(let c=1; c<7; c++) {
+                    l.push({z:1, r: r-0.5, c: c-0.5});
+                }
+            }
+            // Capa 2: 4x1 centrada
+            for(let c=2; c<6; c++) {
+                l.push({z:2, r: 1.5, c: c-0.5});
+            }
+            return l;
+        }
+
+        function isTileBlocked(tile, currentTiles) {
+            const z = parseFloat(tile.z);
+            const r = parseFloat(tile.r);
+            const c = parseFloat(tile.c);
+
+            const above = currentTiles.some(t => 
+                t.z > z && Math.abs(t.r - r) < 1 && Math.abs(t.c - c) < 1
+            );
+            if (above) return true;
+
+            const left = currentTiles.some(t => t.z === z && Math.abs(t.r - r) < 0.5 && t.c === c - 1);
+            const right = currentTiles.some(t => t.z === z && Math.abs(t.r - r) < 0.5 && t.c === c + 1);
+
+            return left && right;
+        }
+
+        function generateSolvableData(layout) {
+            let slots = layout.map((s, i) => ({...s, id: i}));
+            let workingSlots = [...slots];
+            let pairedData = new Array(slots.length);
+
+            while (workingSlots.length > 1) {
+                let freeIndices = [];
+                for (let i = 0; i < workingSlots.length; i++) {
+                    if (!isTileBlocked(workingSlots[i], workingSlots)) {
+                        freeIndices.push(i);
+                    }
+                }
+
+                if (freeIndices.length < 2) break;
+
+                let idxA = freeIndices.splice(Math.floor(Math.random() * freeIndices.length), 1)[0];
+                let idxB = freeIndices.splice(Math.floor(Math.random() * freeIndices.length), 1)[0];
+
+                let slotA = workingSlots[idxA];
+                let slotB = workingSlots[idxB];
+
+                const el = elementsDB[Math.floor(Math.random() * elementsDB.length)];
+                pairedData[slotA.id] = el;
+                pairedData[slotB.id] = el;
+
+                workingSlots = workingSlots.filter(s => s.id !== slotA.id && s.id !== slotB.id);
+            }
+
+            workingSlots.forEach(s => pairedData[s.id] = elementsDB[0]);
+            return pairedData;
+        }
+
+        function initGame() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            pairsCount = 0;
+            selectedTile = null;
+            document.getElementById('win-screen').classList.add('hidden');
+            updateUI();
+
+            const slots = getLayout();
+            const solvableData = generateSolvableData(slots);
+
+            slots.forEach((pos, i) => {
+                const data = solvableData[i];
+                if (!data) return;
+
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.dataset.symbol = data.s;
+                tile.dataset.z = pos.z;
+                tile.dataset.r = pos.r;
+                tile.dataset.c = pos.c;
+                
+                // Posicionamiento centrado: 50% + offset relativo al centro del layout
+                const spacingX = 82;
+                const spacingY = 108;
+                
+                // Calculamos el offset restando el centro del layout (3.5 en columnas, 2 en filas)
+                const offsetX = (pos.c - 3.5) * spacingX;
+                const offsetY = (pos.r - 2) * spacingY;
+
+                tile.style.left = `calc(50% + ${offsetX}px)`;
+                tile.style.top = `calc(50% + ${offsetY}px)`;
+                tile.style.zIndex = pos.z * 10;
+                
+                // El transform incluye el centrado (translate -50%) y el efecto de profundidad
+                const depthOffset = -pos.z * 5;
+                tile.style.transform = `translate(calc(-50% + ${depthOffset}px), calc(-50% + ${depthOffset}px))`;
+
+                tile.innerHTML = `
+                    <div class="tile-number">${data.n}</div>
+                    <div class="tile-symbol">${data.s}</div>
+                    <div class="tile-name">${data.name}</div>
+                    <div class="category-tag cat-${data.cat}">${data.catName}</div>
+                `;
+
+                tile.onclick = () => handleTileClick(tile);
+                board.appendChild(tile);
+            });
+
+            updateTileVisuals();
+        }
+
+        function handleTileClick(tile) {
+            if (tile.classList.contains('blocked')) return;
+
+            if (selectedTile === tile) {
+                tile.classList.remove('selected');
+                selectedTile = null;
+                return;
+            }
+
+            if (!selectedTile) {
+                selectedTile = tile;
+                tile.classList.add('selected');
+            } else {
+                if (selectedTile.dataset.symbol === tile.dataset.symbol) {
+                    selectedTile.remove();
+                    tile.remove();
+                    selectedTile = null;
+                    pairsCount++;
+                    updateUI();
+                    updateTileVisuals();
+
+                    if (document.querySelectorAll('.tile').length === 0) {
+                        document.getElementById('win-screen').classList.remove('hidden');
+                    }
+                } else {
+                    selectedTile.classList.remove('selected');
+                    selectedTile = tile;
+                    tile.classList.add('selected');
+                }
+            }
+        }
+
+        function updateTileVisuals() {
+            const tilesElements = Array.from(document.querySelectorAll('.tile'));
+            const tilesData = tilesElements.map(t => ({
+                z: parseFloat(t.dataset.z),
+                r: parseFloat(t.dataset.r),
+                c: parseFloat(t.dataset.c)
+            }));
+
+            tilesElements.forEach((t, i) => {
+                if (isTileBlocked(tilesData[i], tilesData)) {
+                    t.classList.add('blocked');
+                } else {
+                    t.classList.remove('blocked');
+                }
+            });
+            document.getElementById('tile-count').innerText = tilesElements.length;
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = pairsCount;
+        }
+
+        // Re-centrar si cambia el tamaño de la ventana
+        window.addEventListener('resize', () => {
+            // No necesitamos re-init, las CSS calcs se encargan
+        });
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
