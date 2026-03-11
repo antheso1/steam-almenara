@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabla Periódica Interactiva</title>
+    <style>
+        :root {
+            --noble-gas: #00A3E0;
+            --alkali-metal: #FF4F2E;
+            --alkaline-earth: #FFC000;
+            --transition-metal: #4A90E2;
+            --post-transition: #78C191;
+            --metalloid: #3BB143;
+            --reactive-nonmetal: #614BC3;
+            --halogen: #4B49AC;
+            --lanthanide: #FF8F66;
+            --actinide: #EE78FF;
+            --unknown: #A0AEC0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+
+        header {
+            grid-column: span 2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+        }
+
+        h1 { margin: 0; font-size: 2rem; font-weight: 800; color: #0f172a; }
+
+        .btn-quiz {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-quiz:hover { background: #4338ca; transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4); }
+
+        /* Periodic Table Grid Layout */
+        .table-section {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+
+        .periodic-grid {
+            display: grid;
+            grid-template-columns: repeat(18, 1fr);
+            gap: 5px;
+            min-width: 900px;
+        }
+
+        .element-card {
+            aspect-ratio: 1/1.1;
+            border-radius: 6px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.08);
+            user-select: none;
+        }
+
+        .element-card:hover {
+            transform: scale(1.25);
+            z-index: 50;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+            filter: brightness(1.1);
+        }
+
+        .element-card .num { position: absolute; top: 2px; left: 3px; font-size: 0.6rem; font-weight: bold; opacity: 0.8; }
+        .element-card .sym { font-size: 1.2rem; font-weight: 900; }
+        .element-card .name { font-size: 0.5rem; text-align: center; margin-top: 1px; white-space: nowrap; overflow: hidden; width: 90%; }
+
+        /* Categorías */
+        .noble-gas { background: var(--noble-gas); }
+        .alkali-metal { background: var(--alkali-metal); }
+        .alkaline-earth { background: var(--alkaline-earth); }
+        .transition-metal { background: var(--transition-metal); }
+        .post-transition { background: var(--post-transition); }
+        .metalloid { background: var(--metalloid); }
+        .reactive-nonmetal { background: var(--reactive-nonmetal); }
+        .halogen { background: var(--halogen); }
+        .lanthanide { background: var(--lanthanide); }
+        .actinide { background: var(--actinide); }
+        .unknown { background: var(--unknown); }
+
+        /* Right Panel Detail View */
+        .info-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .hidden { display: none !important; }
+
+        .empty-state {
+            color: #94a3b8;
+            text-align: center;
+            padding: 40px 10px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            border: 2px dashed #e2e8f0;
+            border-radius: 12px;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .mini-sym-box {
+            width: 65px;
+            height: 65px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 900;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-text h2 { margin: 0; font-size: 1.5rem; color: #0f172a; line-height: 1.1; }
+        .header-text p { margin: 5px 0 0; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.8px; }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f8fafc;
+        }
+
+        .data-label { font-size: 0.8rem; color: #64748b; font-weight: 600; }
+        .data-val { font-size: 0.95rem; font-weight: 700; color: #1e293b; }
+
+        .conf-wrapper {
+            margin-top: 8px;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 0.8rem;
+            word-break: break-all;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            line-height: 1.5;
+        }
+
+        /* Quiz UI Elements */
+        .quiz-opt {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            text-align: left;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .quiz-opt:hover { border-color: #4f46e5; background: #f5f3ff; }
+
+        .block-label {
+            margin: 40px 0 10px; 
+            text-align: center; 
+            color: #cbd5e1; 
+            font-size: 0.75rem; 
+            font-weight: 900; 
+            letter-spacing: 6px;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 1100px) {
+            .container { grid-template-columns: 1fr; }
+            .info-panel { position: static; width: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Tabla Periódica Interactiva</h1>
+            <button id="main-quiz-btn" class="btn-quiz">Reto de Elementos</button>
+        </header>
+
+        <div class="table-section">
+            <div id="grid-main" class="periodic-grid"></div>
+            <div class="block-label">Bloque F: Lantánidos y Actínidos</div>
+            <div id="grid-f" class="periodic-grid"></div>
+        </div>
+
+        <aside class="info-panel">
+            <div id="empty-view" class="empty-state">
+                <p>Selecciona un elemento de la tabla para explorar sus propiedades físicas y químicas.</p>
+            </div>
+
+            <div id="detail-view" class="hidden">
+                <div class="detail-header">
+                    <div id="d-box" class="mini-sym-box"></div>
+                    <div class="header-text">
+                        <h2 id="d-name"></h2>
+                        <p id="d-cat"></p>
+                    </div>
+                </div>
+
+                <div class="data-grid">
+                    <div class="data-item"><span class="data-label">Nº Atómico</span><span id="d-num" class="data-val"></span></div>
+                    <div class="data-item"><span class="data-label">Masa Atómica</span><span id="d-mass" class="data-val"></span></div>
+                    <div class="data-item"><span class="data-label">Estado (TP)</span><span id="d-state" class="data-val"></span></div>
+                    <div>
+                        <span class="data-label">Configuración Electrónica:</span>
+                        <div id="d-conf" class="conf-wrapper"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="quiz-view" class="hidden">
+                <div style="display:flex; justify-content: space-between; margin-bottom: 15px; align-items: center;">
+                    <span style="font-size: 0.8rem; font-weight: 800; color: #4f46e5; letter-spacing: 1px;">MODO QUIZ</span>
+                    <span id="q-progress" style="font-size: 0.8rem; font-weight: 800; color: #94a3b8;"></span>
+                </div>
+                <p id="q-text" style="font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; color: #1e293b;"></p>
+                <div id="q-options"></div>
+                <div id="q-feedback" style="margin-top: 20px; padding: 12px; border-radius: 10px; text-align: center; font-size: 0.9rem; font-weight: 700; display: none;"></div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Full database with all 118 elements
+        const elementsData = [
+            {n:1,s:"H",name:"Hidrógeno",mass:"1.008",cat:"reactive-nonmetal",x:1,y:1,conf:"1s¹",state:"Gas"},
+            {n:2,s:"He",name:"Helio",mass:"4.0026",cat:"noble-gas",x:18,y:1,conf:"1s²",state:"Gas"},
+            {n:3,s:"Li",name:"Litio",mass:"6.94",cat:"alkali-metal",x:1,y:2,conf:"[He] 2s¹",state:"Sólido"},
+            {n:4,s:"Be",name:"Berilio",mass:"9.0122",cat:"alkaline-earth",x:2,y:2,conf:"[He] 2s²",state:"Sólido"},
+            {n:5,s:"B",name:"Boro",mass:"10.81",cat:"metalloid",x:13,y:2,conf:"[He] 2s² 2p¹",state:"Sólido"},
+            {n:6,s:"C",name:"Carbono",mass:"12.011",cat:"reactive-nonmetal",x:14,y:2,conf:"[He] 2s² 2p²",state:"Sólido"},
+            {n:7,s:"N",name:"Nitrógeno",mass:"14.007",cat:"reactive-nonmetal",x:15,y:2,conf:"[He] 2s² 2p³",state:"Gas"},
+            {n:8,s:"O",name:"Oxígeno",mass:"15.999",cat:"reactive-nonmetal",x:16,y:2,conf:"[He] 2s² 2p⁴",state:"Gas"},
+            {n:9,s:"F",name:"Flúor",mass:"18.998",cat:"halogen",x:17,y:2,conf:"[He] 2s² 2p⁵",state:"Gas"},
+            {n:10,s:"Ne",name:"Neón",mass:"20.180",cat:"noble-gas",x:18,y:2,conf:"[He] 2s² 2p⁶",state:"Gas"},
+            {n:11,s:"Na",name:"Sodio",mass:"22.990",cat:"alkali-metal",x:1,y:3,conf:"[Ne] 3s¹",state:"Sólido"},
+            {n:12,s:"Mg",name:"Magnesio",mass:"24.305",cat:"alkaline-earth",x:2,y:3,conf:"[Ne] 3s²",state:"Sólido"},
+            {n:13,s:"Al",name:"Aluminio",mass:"26.982",cat:"post-transition",x:13,y:3,conf:"[Ne] 3s² 3p¹",state:"Sólido"},
+            {n:14,s:"Si",name:"Silicio",mass:"28.085",cat:"metalloid",x:14,y:3,conf:"[Ne] 3s² 3p²",state:"Sólido"},
+            {n:15,s:"P",name:"Fósforo",mass:"30.974",cat:"reactive-nonmetal",x:15,y:3,conf:"[Ne] 3s² 3p³",state:"Sólido"},
+            {n:16,s:"S",name:"Azufre",mass:"32.06",cat:"reactive-nonmetal",x:16,y:3,conf:"[Ne] 3s² 3p⁴",state:"Sólido"},
+            {n:17,s:"Cl",name:"Cloro",mass:"35.45",cat:"halogen",x:17,y:3,conf:"[Ne] 3s² 3p⁵",state:"Gas"},
+            {n:18,s:"Ar",name:"Argón",mass:"39.948",cat:"noble-gas",x:18,y:3,conf:"[Ne] 3s² 3p⁶",state:"Gas"},
+            {n:19,s:"K",name:"Potasio",mass:"39.098",cat:"alkali-metal",x:1,y:4,conf:"[Ar] 4s¹",state:"Sólido"},
+            {n:20,s:"Ca",name:"Calcio",mass:"40.078",cat:"alkaline-earth",x:2,y:4,conf:"[Ar] 4s²",state:"Sólido"},
+            {n:21,s:"Sc",name:"Escandio",mass:"44.956",cat:"transition-metal",x:3,y:4,conf:"[Ar] 3d¹ 4s²",state:"Sólido"},
+            {n:22,s:"Ti",name:"Titanio",mass:"47.867",cat:"transition-metal",x:4,y:4,conf:"[Ar] 3d² 4s²",state:"Sólido"},
+            {n:23,s:"V",name:"Vanadio",mass:"50.942",cat:"transition-metal",x:5,y:4,conf:"[Ar] 3d³ 4s²",state:"Sólido"},
+            {n:24,s:"Cr",name:"Cromo",mass:"51.996",cat:"transition-metal",x:6,y:4,conf:"[Ar] 3d⁵ 4s¹",state:"Sólido"},
+            {n:25,s:"Mn",name:"Manganeso",mass:"54.938",cat:"transition-metal",x:7,y:4,conf:"[Ar] 3d⁵ 4s²",state:"Sólido"},
+            {n:26,s:"Fe",name:"Hierro",mass:"55.845",cat:"transition-metal",x:8,y:4,conf:"[Ar] 3d⁶ 4s²",state:"Sólido"},
+            {n:27,s:"Co",name:"Cobalto",mass:"58.933",cat:"transition-metal",x:9,y:4,conf:"[Ar] 3d⁷ 4s²",state:"Sólido"},
+            {n:28,s:"Ni",name:"Níquel",mass:"58.693",cat:"transition-metal",x:10,y:4,conf:"[Ar] 3d⁸ 4s²",state:"Sólido"},
+            {n:29,s:"Cu",name:"Cobre",mass:"63.546",cat:"transition-metal",x:11,y:4,conf:"[Ar] 3d¹⁰ 4s¹",state:"Sólido"},
+            {n:30,s:"Zn",name:"Zinc",mass:"65.38",cat:"transition-metal",x:12,y:4,conf:"[Ar] 3d¹⁰ 4s²",state:"Sólido"},
+            {n:31,s:"Ga",name:"Galio",mass:"69.723",cat:"post-transition",x:13,y:4,conf:"[Ar] 3d¹⁰ 4s² 4p¹",state:"Sólido"},
+            {n:32,s:"Ge",name:"Germanio",mass:"72.630",cat:"metalloid",x:14,y:4,conf:"[Ar] 3d¹⁰ 4s² 4p²",state:"Sólido"},
+            {n:33,s:"As",name:"Arsénico",mass:"74.922",cat:"metalloid",x:15,y:4,conf:"[Ar] 3d¹⁰ 4s² 4p³",state:"Sólido"},
+            {n:34,s:"Se",name:"Selenio",mass:"78.971",cat:"reactive-nonmetal",x:16,y:4,conf:"[Ar] 3d¹⁰ 4s² 4p⁴",state:"Sólido"},
+            {n:35,s:"Br",name:"Bromo",mass:"79.904",cat:"halogen",x:17,y:4,conf:"[Ar] 3d¹⁰ 4s² 4p⁵",state:"Líquido"},
+            {n:36,s:"Kr",name:"Kriptón",mass:"83.798",cat:"noble-gas",x:18,y:4,conf:"[Ar] 3d¹⁰ 4s² 4p⁶",state:"Gas"},
+            {n:37,s:"Rb",name:"Rubidio",mass:"85.468",cat:"alkali-metal",x:1,y:5,conf:"[Kr] 5s¹",state:"Sólido"},
+            {n:38,s:"Sr",name:"Estroncio",mass:"87.62",cat:"alkaline-earth",x:2,y:5,conf:"[Kr] 5s²",state:"Sólido"},
+            {n:39,s:"Y",name:"Itrio",mass:"88.906",cat:"transition-metal",x:3,y:5,conf:"[Kr] 4d¹ 5s²",state:"Sólido"},
+            {n:40,s:"Zr",name:"Zirconio",mass:"91.224",cat:"transition-metal",x:4,y:5,conf:"[Kr] 4d² 5s²",state:"Sólido"},
+            {n:41,s:"Nb",name:"Niobio",mass:"92.906",cat:"transition-metal",x:5,y:5,conf:"[Kr] 4d⁴ 5s¹",state:"Sólido"},
+            {n:42,s:"Mo",name:"Molibdeno",mass:"95.95",cat:"transition-metal",x:6,y:5,conf:"[Kr] 4d⁵ 5s¹",state:"Sólido"},
+            {n:43,s:"Tc",name:"Tecnecio",mass:"98",cat:"transition-metal",x:7,y:5,conf:"[Kr] 4d⁵ 5s²",state:"Sólido"},
+            {n:44,s:"Ru",name:"Rutenio",mass:"101.07",cat:"transition-metal",x:8,y:5,conf:"[Kr] 4d⁷ 5s¹",state:"Sólido"},
+            {n:45,s:"Rh",name:"Rodio",mass:"102.91",cat:"transition-metal",x:9,y:5,conf:"[Kr] 4d⁸ 5s¹",state:"Sólido"},
+            {n:46,s:"Pd",name:"Paladio",mass:"106.42",cat:"transition-metal",x:10,y:5,conf:"[Kr] 4d¹⁰",state:"Sólido"},
+            {n:47,s:"Ag",name:"Plata",mass:"107.87",cat:"transition-metal",x:11,y:5,conf:"[Kr] 4d¹⁰ 5s¹",state:"Sólido"},
+            {n:48,s:"Cd",name:"Cadmio",mass:"112.41",cat:"transition-metal",x:12,y:5,conf:"[Kr] 4d¹⁰ 5s²",state:"Sólido"},
+            {n:49,s:"In",name:"Indio",mass:"114.82",cat:"post-transition",x:13,y:5,conf:"[Kr] 4d¹⁰ 5s² 5p¹",state:"Sólido"},
+            {n:50,s:"Sn",name:"Estaño",mass:"118.71",cat:"post-transition",x:14,y:5,conf:"[Kr] 4d¹⁰ 5s² 5p²",state:"Sólido"},
+            {n:51,s:"Sb",name:"Antimonio",mass:"121.76",cat:"metalloid",x:15,y:5,conf:"[Kr] 4d¹⁰ 5s² 5p³",state:"Sólido"},
+            {n:52,s:"Te",name:"Telurio",mass:"127.60",cat:"metalloid",x:16,y:5,conf:"[Kr] 4d¹⁰ 5s² 5p⁴",state:"Sólido"},
+            {n:53,s:"I",name:"Yodo",mass:"126.90",cat:"halogen",x:17,y:5,conf:"[Kr] 4d¹⁰ 5s² 5p⁵",state:"Sólido"},
+            {n:54,s:"Xe",name:"Xenón",mass:"131.29",cat:"noble-gas",x:18,y:5,conf:"[Kr] 4d¹⁰ 5s² 5p⁶",state:"Gas"},
+            {n:55,s:"Cs",name:"Cesio",mass:"132.91",cat:"alkali-metal",x:1,y:6,conf:"[Xe] 6s¹",state:"Sólido"},
+            {n:56,s:"Ba",name:"Bario",mass:"137.33",cat:"alkaline-earth",x:2,y:6,conf:"[Xe] 6s²",state:"Sólido"},
+            // Lantánidos
+            {n:57,s:"La",name:"Lantano",mass:"138.91",cat:"lanthanide",x:4,y:9,conf:"[Xe] 5d¹ 6s²",state:"Sólido"},
+            {n:58,s:"Ce",name:"Cerio",mass:"140.12",cat:"lanthanide",x:5,y:9,conf:"[Xe] 4f¹ 5d¹ 6s²",state:"Sólido"},
+            {n:59,s:"Pr",name:"Praseodimio",mass:"140.91",cat:"lanthanide",x:6,y:9,conf:"[Xe] 4f³ 6s²",state:"Sólido"},
+            {n:60,s:"Nd",name:"Neodimio",mass:"144.24",cat:"lanthanide",x:7,y:9,conf:"[Xe] 4f⁴ 6s²",state:"Sólido"},
+            {n:61,s:"Pm",name:"Prometio",mass:"145",cat:"lanthanide",x:8,y:9,conf:"[Xe] 4f⁵ 6s²",state:"Sólido"},
+            {n:62,s:"Sm",name:"Samario",mass:"150.36",cat:"lanthanide",x:9,y:9,conf:"[Xe] 4f⁶ 6s²",state:"Sólido"},
+            {n:63,s:"Eu",name:"Europio",mass:"151.96",cat:"lanthanide",x:10,y:9,conf:"[Xe] 4f⁷ 6s²",state:"Sólido"},
+            {n:64,s:"Gd",name:"Gadolinio",mass:"157.25",cat:"lanthanide",x:11,y:9,conf:"[Xe] 4f⁷ 5d¹ 6s²",state:"Sólido"},
+            {n:65,s:"Tb",name:"Terbio",mass:"158.93",cat:"lanthanide",x:12,y:9,conf:"[Xe] 4f⁹ 6s²",state:"Sólido"},
+            {n:66,s:"Dy",name:"Disprosio",mass:"162.50",cat:"lanthanide",x:13,y:9,conf:"[Xe] 4f¹⁰ 6s²",state:"Sólido"},
+            {n:67,s:"Ho",name:"Holmio",mass:"164.93",cat:"lanthanide",x:14,y:9,conf:"[Xe] 4f¹¹ 6s²",state:"Sólido"},
+            {n:68,s:"Er",name:"Erbio",mass:"167.26",cat:"lanthanide",x:15,y:9,conf:"[Xe] 4f¹² 6s²",state:"Sólido"},
+            {n:69,s:"Tm",name:"Tulio",mass:"168.93",cat:"lanthanide",x:16,y:9,conf:"[Xe] 4f¹³ 6s²",state:"Sólido"},
+            {n:70,s:"Yb",name:"Iterbio",mass:"173.05",cat:"lanthanide",x:17,y:9,conf:"[Xe] 4f¹⁴ 6s²",state:"Sólido"},
+            {n:71,s:"Lu",name:"Lutecio",mass:"174.97",cat:"lanthanide",x:18,y:9,conf:"[Xe] 4f¹⁴ 5d¹ 6s²",state:"Sólido"},
+            // Sigue Tabla Periodo 6
+            {n:72,s:"Hf",name:"Hafnio",mass:"178.49",cat:"transition-metal",x:4,y:6,conf:"[Xe] 4f¹⁴ 5d² 6s²",state:"Sólido"},
+            {n:73,s:"Ta",name:"Tantalio",mass:"180.95",cat:"transition-metal",x:5,y:6,conf:"[Xe] 4f¹⁴ 5d³ 6s²",state:"Sólido"},
+            {n:74,s:"W",name:"Wolframio",mass:"183.84",cat:"transition-metal",x:6,y:6,conf:"[Xe] 4f¹⁴ 5d⁴ 6s²",state:"Sólido"},
+            {n:75,s:"Re",name:"Renio",mass:"186.21",cat:"transition-metal",x:7,y:6,conf:"[Xe] 4f¹⁴ 5d⁵ 6s²",state:"Sólido"},
+            {n:76,s:"Os",name:"Osmio",mass:"190.23",cat:"transition-metal",x:8,y:6,conf:"[Xe] 4f¹⁴ 5d⁶ 6s²",state:"Sólido"},
+            {n:77,s:"Ir",name:"Iridio",mass:"192.22",cat:"transition-metal",x:9,y:6,conf:"[Xe] 4f¹⁴ 5d⁷ 6s²",state:"Sólido"},
+            {n:78,s:"Pt",name:"Platino",mass:"195.08",cat:"transition-metal",x:10,y:6,conf:"[Xe] 4f¹⁴ 5d⁹ 6s¹",state:"Sólido"},
+            {n:79,s:"Au",name:"Oro",mass:"196.97",cat:"transition-metal",x:11,y:6,conf:"[Xe] 4f¹⁴ 5d¹⁰ 6s¹",state:"Sólido"},
+            {n:80,s:"Hg",name:"Mercurio",mass:"200.59",cat:"transition-metal",x:12,y:6,conf:"[Xe] 4f¹⁴ 5d¹⁰ 6s²",state:"Líquido"},
+            {n:81,s:"Tl",name:"Talio",mass:"204.38",cat:"post-transition",x:13,y:6,conf:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p¹",state:"Sólido"},
+            {n:82,s:"Pb",name:"Plomo",mass:"207.2",cat:"post-transition",x:14,y:6,conf:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p²",state:"Sólido"},
+            {n:83,s:"Bi",name:"Bismuto",mass:"208.98",cat:"post-transition",x:15,y:6,conf:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p³",state:"Sólido"},
+            {n:84,s:"Po",name:"Polonio",mass:"209",cat:"post-transition",x:16,y:6,conf:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁴",state:"Sólido"},
+            {n:85,s:"At",name:"Astato",mass:"210",cat:"metalloid",x:17,y:6,conf:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁵",state:"Sólido"},
+            {n:86,s:"Rn",name:"Radón",mass:"222",cat:"noble-gas",x:18,y:6,conf:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁶",state:"Gas"},
+            {n:87,s:"Fr",name:"Francio",mass:"223",cat:"alkali-metal",x:1,y:7,conf:"[Rn] 7s¹",state:"Sólido"},
+            {n:88,s:"Ra",name:"Radio",mass:"226",cat:"alkaline-earth",x:2,y:7,conf:"[Rn] 7s²",state:"Sólido"},
+            // Actínidos
+            {n:89,s:"Ac",name:"Actinio",mass:"227",cat:"actinide",x:4,y:10,conf:"[Rn] 6d¹ 7s²",state:"Sólido"},
+            {n:90,s:"Th",name:"Torio",mass:"232.04",cat:"actinide",x:5,y:10,conf:"[Rn] 6d² 7s²",state:"Sólido"},
+            {n:91,s:"Pa",name:"Protactinio",mass:"231.04",cat:"actinide",x:6,y:10,conf:"[Rn] 5f² 6d¹ 7s²",state:"Sólido"},
+            {n:92,s:"U",name:"Uranio",mass:"238.03",cat:"actinide",x:7,y:10,conf:"[Rn] 5f³ 6d¹ 7s²",state:"Sólido"},
+            {n:93,s:"Np",name:"Neptunio",mass:"237",cat:"actinide",x:8,y:10,conf:"[Rn] 5f⁴ 6d¹ 7s²",state:"Sólido"},
+            {n:94,s:"Pu",name:"Plutonio",mass:"244",cat:"actinide",x:9,y:10,conf:"[Rn] 5f⁶ 7s²",state:"Sólido"},
+            {n:95,s:"Am",name:"Americio",mass:"243",cat:"actinide",x:10,y:10,conf:"[Rn] 5f⁷ 7s²",state:"Sólido"},
+            {n:96,s:"Cm",name:"Curio",mass:"247",cat:"actinide",x:11,y:10,conf:"[Rn] 5f⁷ 6d¹ 7s²",state:"Sólido"},
+            {n:97,s:"Bk",name:"Berkelio",mass:"247",cat:"actinide",x:12,y:10,conf:"[Rn] 5f⁹ 7s²",state:"Sólido"},
+            {n:98,s:"Cf",name:"Californio",mass:"251",cat:"actinide",x:13,y:10,conf:"[Rn] 5f¹⁰ 7s²",state:"Sólido"},
+            {n:99,s:"Es",name:"Einsteinio",mass:"252",cat:"actinide",x:14,y:10,conf:"[Rn] 5f¹¹ 7s²",state:"Sólido"},
+            {n:100,s:"Fm",name:"Fermio",mass:"257",cat:"actinide",x:15,y:10,conf:"[Rn] 5f¹² 7s²",state:"Sólido"},
+            {n:101,s:"Md",name:"Mendelevio",mass:"258",cat:"actinide",x:16,y:10,conf:"[Rn] 5f¹³ 7s²",state:"Sólido"},
+            {n:102,s:"No",name:"Nobelio",mass:"259",cat:"actinide",x:17,y:10,conf:"[Rn] 5f¹⁴ 7s²",state:"Sólido"},
+            {n:103,s:"Lr",name:"Lawrencio",mass:"262",cat:"actinide",x:18,y:10,conf:"[Rn] 5f¹⁴ 7s² 7p¹",state:"Sólido"},
+            // Sigue Tabla Periodo 7
+            {n:104,s:"Rf",name:"Rutherfordio",mass:"267",cat:"transition-metal",x:4,y:7,conf:"[Rn] 5f¹⁴ 6d² 7s²",state:"Sólido"},
+            {n:105,s:"Db",name:"Dubnio",mass:"268",cat:"transition-metal",x:5,y:7,conf:"[Rn] 5f¹⁴ 6d³ 7s²",state:"Sólido"},
+            {n:106,s:"Sg",name:"Seaborgio",mass:"269",cat:"transition-metal",x:6,y:7,conf:"[Rn] 5f¹⁴ 6d⁴ 7s²",state:"Sólido"},
+            {n:107,s:"Bh",name:"Bohrio",mass:"270",cat:"transition-metal",x:7,y:7,conf:"[Rn] 5f¹⁴ 6d⁵ 7s²",state:"Sólido"},
+            {n:108,s:"Hs",name:"Hassio",mass:"269",cat:"transition-metal",x:8,y:7,conf:"[Rn] 5f¹⁴ 6d⁶ 7s²",state:"Sólido"},
+            {n:109,s:"Mt",name:"Meitnerio",mass:"278",cat:"unknown",x:9,y:7,conf:"[Rn] 5f¹⁴ 6d⁷ 7s²",state:"Sólido"},
+            {n:110,s:"Ds",name:"Darmstadtio",mass:"281",cat:"unknown",x:10,y:7,conf:"[Rn] 5f¹⁴ 6d⁹ 7s¹",state:"Sólido"},
+            {n:111,s:"Rg",name:"Roentgenio",mass:"282",cat:"unknown",x:11,y:7,conf:"[Rn] 5f¹⁴ 6d¹⁰ 7s¹",state:"Sólido"},
+            {n:112,s:"Cn",name:"Copernicio",mass:"285",cat:"transition-metal",x:12,y:7,conf:"[Rn] 5f¹⁴ 6d¹⁰ 7s²",state:"Líquido"},
+            {n:113,s:"Nh",name:"Nihonio",mass:"286",cat:"unknown",x:13,y:7,conf:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p¹",state:"Sólido"},
+            {n:114,s:"Fl",name:"Flerovio",mass:"289",cat:"post-transition",x:14,y:7,conf:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p²",state:"Sólido"},
+            {n:115,s:"Mc",name:"Moscovio",mass:"290",cat:"unknown",x:15,y:7,conf:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p³",state:"Sólido"},
+            {n:116,s:"Lv",name:"Livermorio",mass:"293",cat:"unknown",x:16,y:7,conf:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁴",state:"Sólido"},
+            {n:117,s:"Ts",name:"Teneso",mass:"294",cat:"unknown",x:17,y:7,conf:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁵",state:"Sólido"},
+            {n:118,s:"Og",name:"Oganesón",mass:"294",cat:"unknown",x:18,y:7,conf:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁶",state:"Gas"}
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const gridMain = document.getElementById('grid-main');
+            const gridF = document.getElementById('grid-f');
+            
+            elementsData.forEach(el => {
+                const card = document.createElement('div');
+                card.className = `element-card ${el.cat}`;
+                card.style.gridColumn = el.x;
+                card.style.gridRow = el.y;
+                card.dataset.number = el.n;
+                card.innerHTML = `<span class="num">${el.n}</span><span class="sym">${el.s}</span><span class="name">${el.name}</span>`;
+                
+                // Logic to place Lanthanides and Actinides in the bottom grid
+                if ((el.n >= 57 && el.n <= 71) || (el.n >= 89 && el.n <= 103)) {
+                    gridF.appendChild(card);
+                } else {
+                    gridMain.appendChild(card);
+                }
+
+                // Add placeholders in the main grid for the f-block gap
+                if (el.n === 56) {
+                    const place = document.createElement('div');
+                    place.className = 'element-card unknown';
+                    place.style.gridColumn = 3; place.style.gridRow = 6;
+                    place.style.opacity = "0.5";
+                    place.innerHTML = `<span class="sym" style="font-size:0.7rem">57-71</span>`;
+                    gridMain.appendChild(place);
+                }
+                if (el.n === 88) {
+                    const place = document.createElement('div');
+                    place.className = 'element-card unknown';
+                    place.style.gridColumn = 3; place.style.gridRow = 7;
+                    place.style.opacity = "0.5";
+                    place.innerHTML = `<span class="sym" style="font-size:0.7rem">89-103</span>`;
+                    gridMain.appendChild(place);
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                const card = e.target.closest('.element-card');
+                if (card && card.dataset.number) {
+                    const elData = elementsData.find(item => item.n == card.dataset.number);
+                    if (elData) showDetail(elData);
+                }
+            });
+
+            document.getElementById('main-quiz-btn').addEventListener('click', startQuiz);
+        });
+
+        function showDetail(el) {
+            document.getElementById('empty-view').classList.add('hidden');
+            document.getElementById('quiz-view').classList.add('hidden');
+            const view = document.getElementById('detail-view');
+            view.classList.remove('hidden');
+
+            document.getElementById('d-name').innerText = el.name;
+            document.getElementById('d-cat').innerText = el.cat.replace(/-/g, ' ');
+            document.getElementById('d-num').innerText = el.n;
+            document.getElementById('d-mass').innerText = el.mass + ' u';
+            document.getElementById('d-state').innerText = el.state;
+            document.getElementById('d-conf').innerText = el.conf;
+            
+            const box = document.getElementById('d-box');
+            box.innerText = el.s;
+            box.className = `mini-sym-box ${el.cat}`;
+        }
+
+        let quizState = { current: 0, score: 0, items: [] };
+
+        function startQuiz() {
+            document.getElementById('empty-view').classList.add('hidden');
+            document.getElementById('detail-view').classList.add('hidden');
+            const quizView = document.getElementById('quiz-view');
+            quizView.classList.remove('hidden');
+            
+            quizState.score = 0; quizState.current = 0;
+            quizState.items = [...elementsData]
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 5)
+                .map(el => {
+                    let options = [el.name];
+                    while(options.length < 4) {
+                        const r = elementsData[Math.floor(Math.random() * elementsData.length)].name;
+                        if(!options.includes(r)) options.push(r);
+                    }
+                    return {
+                        symbol: el.s,
+                        correct: el.name,
+                        options: options.sort(() => Math.random() - 0.5)
+                    };
+                });
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = quizState.items[quizState.current];
+            document.getElementById('q-progress').innerText = `${quizState.current + 1} / 5`;
+            document.getElementById('q-text').innerText = `¿Cuál es el nombre del elemento químico "${q.symbol}"?`;
+            
+            const fb = document.getElementById('q-feedback');
+            fb.style.display = 'none';
+            
+            const container = document.getElementById('q-options');
+            container.innerHTML = '';
+            
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-opt';
+                btn.innerText = opt;
+                btn.onclick = () => {
+                    fb.style.display = 'block';
+                    if(opt === q.correct) {
+                        quizState.score++;
+                        fb.innerText = "¡Correcto! Excelente.";
+                        fb.style.backgroundColor = "#dcfce7"; fb.style.color = "#15803d";
+                    } else {
+                        fb.innerText = `Incorrecto. Era el ${q.correct}.`;
+                        fb.style.backgroundColor = "#fee2e2"; fb.style.color = "#b91c1c";
+                    }
+                    
+                    const allBtns = container.querySelectorAll('button');
+                    allBtns.forEach(b => b.disabled = true);
+                    
+                    setTimeout(() => {
+                        quizState.current++;
+                        if (quizState.current < 5) renderQuestion();
+                        else showQuizResult();
+                    }, 1500);
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function showQuizResult() {
+            const quizView = document.getElementById('quiz-view');
+            quizView.innerHTML = `
+                <div style="text-align: center; padding: 20px 0;">
+                    <div style="font-size: 0.8rem; font-weight: 800; color: #64748b; margin-bottom: 10px;">RESULTADO FINAL</div>
+                    <div style="font-size: 3.5rem; font-weight: 900; color: #4f46e5; line-height: 1;">${quizState.score}/5</div>
+                    <p style="font-weight: 600; color: #1e293b; margin: 20px 0;">${quizState.score === 5 ? '¡Eres un experto en química!' : '¡Sigue estudiando los elementos!'}</p>
+                    <button onclick="location.reload()" class="btn-quiz" style="width: 100%;">Cerrar y Volver a la Tabla</button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
