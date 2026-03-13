@@ -2,13 +2,15 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora Ley de Ohm S.I.</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        
+        /* Flecha personalizada para los selectores */
         select {
             -webkit-appearance: none;
             -moz-appearance: none;
@@ -19,63 +21,57 @@
             background-size: 1em;
             cursor: pointer;
         }
+        
+        /* Eliminamos inputs numéricos nativos para limpieza */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
-        input[type=number] { -moz-appearance: textfield; }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
 
+        /* Estilo de foco más estable para evitar que se borre la imagen */
         .input-group:focus-within {
-            border-color: #7e22ce;
+            border-color: #7e22ce; /* Purple-700 */
             box-shadow: 0 0 0 4px rgba(126, 34, 206, 0.1);
         }
     </style>
 </head>
-<body class="bg-gray-50 p-2 md:p-6">
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
 
-<div class="flex justify-end p-2 bg-gray-100 border-b">
-    <button onclick="cerrarVentana()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-full flex items-center gap-2 shadow-lg transition-transform active:scale-95">
-        <span class="text-sm font-black">X</span>
-        <span class="text-[10px] uppercase">Cerrar / Volver</span>
-    </button>
-</div>
-
-<script>
-function cerrarVentana() {
-    // Intenta cerrar la pestaña (solo funciona si la web se abrió en ventana nueva)
-    window.close();
-    
-    // Si no se cierra (porque no es ventana nueva), vuelve atrás en el historial
-    setTimeout(function() {
-        window.history.back();
-    }, 100);
-}
-</script>
-
-    
-    <div class="bg-white p-4 md:p-8 rounded-2xl shadow-xl w-full max-w-4xl border border-gray-200 mx-auto">
+    <div class="bg-white p-4 md:p-8 rounded-2xl shadow-xl w-full max-w-4xl border border-gray-200">
         
-        <div class="text-center mb-6">
-            <h1 class="text-2xl md:text-4xl font-light text-gray-800 tracking-tight mb-2">Calculadora de la <span class="font-bold text-gray-900">Ley de Ohm</span></h1>
-            <p class="text-gray-500 text-sm">Introduce <strong>dos valores</strong> y pulsa calcular.</p>
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-light text-gray-800 tracking-tight mb-2">Calculadora de la <span class="font-bold text-gray-900">Ley de Ohm</span></h1>
+            <p class="text-gray-500 text-sm">Introduce <strong>dos valores</strong> para obtener el resto con unidades automáticas.</p>
         </div>
 
+        <!-- Error Message -->
         <div id="error-msg" class="hidden mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
-            <p id="error-text" class="text-sm font-bold"></p>
+            <p class="font-bold text-sm">Atención</p>
+            <p id="error-text" class="text-sm">Por favor revisa los datos.</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <!-- Grid Container -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
 
-            <div class="input-group relative flex items-center bg-white rounded-xl border-2 border-gray-100 overflow-hidden h-16 md:h-20 transition-colors">
-                <div class="bg-sky-700 w-16 md:w-20 h-full flex-shrink-0 flex items-center justify-center text-white z-10">
+            <!-- Voltage (V) -->
+            <div class="input-group relative flex items-center bg-white rounded-xl border-2 border-gray-100 overflow-hidden h-20 transition-colors">
+                <!-- Icon Container: Added z-10 to prevent disappearing -->
+                <div class="bg-sky-700 w-20 h-full flex-shrink-0 flex items-center justify-center text-white z-10">
                     <div class="flex flex-col items-center">
-                        <span class="text-xl md:text-2xl font-bold leading-none">V</span>
+                        <span class="text-2xl font-bold leading-none">V</span>
+                        <i data-lucide="zap" class="w-5 h-5 mt-1 opacity-80"></i>
                     </div>
                 </div>
-                <input type="number" step="any" id="val-v" placeholder="Tensión" class="min-w-0 flex-grow h-full px-4 text-xl md:text-2xl font-bold text-gray-700 focus:outline-none bg-transparent">
-                <div class="bg-gray-50 border-l border-gray-200 w-20 md:w-24 h-full flex-shrink-0 relative z-10">
-                    <select id="unit-v" class="w-full h-full px-2 bg-transparent text-gray-800 font-bold text-base md:text-lg focus:outline-none">
+                <!-- Input: Added min-w-0 to prevent flex overflow issues -->
+                <input type="number" step="any" id="val-v" placeholder="Tensión" class="min-w-0 flex-grow h-full px-4 text-2xl font-bold text-gray-700 focus:outline-none placeholder-gray-300 bg-transparent">
+                <!-- Unit Select -->
+                <div class="bg-gray-50 border-l border-gray-200 w-24 h-full flex-shrink-0 relative z-10">
+                    <select id="unit-v" class="w-full h-full px-2 bg-transparent text-gray-800 font-bold text-lg focus:outline-none">
                         <option value="0.001">mV</option>
                         <option value="1" selected>V</option>
                         <option value="1000">kV</option>
@@ -83,15 +79,17 @@ function cerrarVentana() {
                 </div>
             </div>
 
-            <div class="input-group relative flex items-center bg-white rounded-xl border-2 border-gray-100 overflow-hidden h-16 md:h-20 transition-colors">
-                <div class="bg-red-600 w-16 md:w-20 h-full flex-shrink-0 flex items-center justify-center text-white z-10">
+            <!-- Current (I) -->
+            <div class="input-group relative flex items-center bg-white rounded-xl border-2 border-gray-100 overflow-hidden h-20 transition-colors">
+                <div class="bg-red-600 w-20 h-full flex-shrink-0 flex items-center justify-center text-white z-10">
                     <div class="flex flex-col items-center">
-                        <span class="text-xl md:text-2xl font-bold leading-none">I</span>
+                        <span class="text-2xl font-bold leading-none">I</span>
+                        <i data-lucide="move-right" class="w-5 h-5 mt-1 opacity-80"></i>
                     </div>
                 </div>
-                <input type="number" step="any" id="val-i" placeholder="Intensidad" class="min-w-0 flex-grow h-full px-4 text-xl md:text-2xl font-bold text-gray-700 focus:outline-none bg-transparent">
-                <div class="bg-gray-50 border-l border-gray-200 w-20 md:w-24 h-full flex-shrink-0 relative z-10">
-                    <select id="unit-i" class="w-full h-full px-2 bg-transparent text-gray-800 font-bold text-base md:text-lg focus:outline-none">
+                <input type="number" step="any" id="val-i" placeholder="Intensidad" class="min-w-0 flex-grow h-full px-4 text-2xl font-bold text-gray-700 focus:outline-none placeholder-gray-300 bg-transparent">
+                <div class="bg-gray-50 border-l border-gray-200 w-24 h-full flex-shrink-0 relative z-10">
+                    <select id="unit-i" class="w-full h-full px-2 bg-transparent text-gray-800 font-bold text-lg focus:outline-none">
                         <option value="0.000001">µA</option>
                         <option value="0.001" selected>mA</option>
                         <option value="1">A</option>
@@ -99,13 +97,175 @@ function cerrarVentana() {
                 </div>
             </div>
 
-            <div class="input-group relative flex items-center bg-white rounded-xl border-2 border-gray-100 overflow-hidden h-16 md:h-20 transition-colors">
-                <div class="bg-emerald-600 w-16 md:w-20 h-full flex-shrink-0 flex items-center justify-center text-white z-10">
+            <!-- Resistance (R) -->
+            <div class="input-group relative flex items-center bg-white rounded-xl border-2 border-gray-100 overflow-hidden h-20 transition-colors">
+                <div class="bg-emerald-600 w-20 h-full flex-shrink-0 flex items-center justify-center text-white z-10">
                     <div class="flex flex-col items-center">
-                        <span class="text-xl md:text-2xl font-bold leading-none">R</span>
+                        <span class="text-2xl font-bold leading-none">R</span>
+                        <i data-lucide="activity" class="w-5 h-5 mt-1 opacity-80"></i>
                     </div>
                 </div>
-                <input type="number" step="any" id="val-r" placeholder="Resistencia" class="min-w-0 flex-grow h-full px-4 text-xl md:text-2xl font-bold text-gray-700 focus:outline-none bg-transparent">
-                <div class="bg-gray-50 border-l border-gray-200 w-20 md:w-24 h-full flex-shrink-0 relative z-10">
-                    <select id="unit-r" class="
+                <input type="number" step="any" id="val-r" placeholder="Resistencia" class="min-w-0 flex-grow h-full px-4 text-2xl font-bold text-gray-700 focus:outline-none placeholder-gray-300 bg-transparent">
+                <div class="bg-gray-50 border-l border-gray-200 w-24 h-full flex-shrink-0 relative z-10">
+                    <select id="unit-r" class="w-full h-full px-2 bg-transparent text-gray-800 font-bold text-lg focus:outline-none">
+                        <option value="1" selected>Ω</option>
+                        <option value="1000">kΩ</option>
+                        <option value="1000000">MΩ</option>
+                    </select>
+                </div>
+            </div>
 
+            <!-- Power (P) -->
+            <div class="input-group relative flex items-center bg-white rounded-xl border-2 border-gray-100 overflow-hidden h-20 transition-colors">
+                <div class="bg-amber-500 w-20 h-full flex-shrink-0 flex items-center justify-center text-white z-10">
+                    <div class="flex flex-col items-center">
+                        <span class="text-2xl font-bold leading-none">P</span>
+                        <i data-lucide="lightbulb" class="w-5 h-5 mt-1 opacity-80"></i>
+                    </div>
+                </div>
+                <input type="number" step="any" id="val-p" placeholder="Potencia" class="min-w-0 flex-grow h-full px-4 text-2xl font-bold text-gray-700 focus:outline-none placeholder-gray-300 bg-transparent">
+                <div class="bg-gray-50 border-l border-gray-200 w-24 h-full flex-shrink-0 relative z-10">
+                    <select id="unit-p" class="w-full h-full px-2 bg-transparent text-gray-800 font-bold text-lg focus:outline-none">
+                        <option value="0.001">mW</option>
+                        <option value="1" selected>W</option>
+                        <option value="1000">kW</option>
+                    </select>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col md:flex-row gap-4 mt-4">
+            <button onclick="clearFields()" class="flex-1 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-bold text-lg shadow-lg transform active:scale-95 transition-all flex justify-center items-center gap-2">
+                <i data-lucide="rotate-ccw"></i> LIMPIAR (C)
+            </button>
+            <button onclick="calculate()" class="flex-1 py-4 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold text-lg shadow-lg transform active:scale-95 transition-all flex justify-center items-center gap-2">
+                <i data-lucide="calculator"></i> CALCULAR (=)
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // DOM Elements
+        const inputs = {
+            v: document.getElementById('val-v'),
+            i: document.getElementById('val-i'),
+            r: document.getElementById('val-r'),
+            p: document.getElementById('val-p')
+        };
+        const units = {
+            v: document.getElementById('unit-v'),
+            i: document.getElementById('unit-i'),
+            r: document.getElementById('unit-r'),
+            p: document.getElementById('unit-p')
+        };
+        const errorBox = document.getElementById('error-msg');
+        const errorText = document.getElementById('error-text');
+
+        function showError(msg) {
+            errorText.textContent = msg;
+            errorBox.classList.remove('hidden');
+            setTimeout(() => errorBox.classList.add('hidden'), 4000);
+        }
+
+        function clearFields() {
+            Object.keys(inputs).forEach(key => {
+                inputs[key].value = '';
+                inputs[key].classList.remove('text-purple-700');
+                
+                // Reset units to sensible defaults
+                if (key === 'v') units[key].value = "1";
+                if (key === 'i') units[key].value = "0.001"; // mA
+                if (key === 'r') units[key].value = "1";
+                if (key === 'p') units[key].value = "1";
+            });
+            errorBox.classList.add('hidden');
+        }
+
+        // Smart Unit Scaling
+        function autoScale(key, baseVal) {
+            if (baseVal === 0 || !isFinite(baseVal)) return 0;
+            const abs = Math.abs(baseVal);
+            let newVal = "1";
+
+            if (key === 'v') {
+                if (abs < 1) newVal = "0.001"; // mV
+                else if (abs >= 1000) newVal = "1000"; // kV
+                else newVal = "1";
+            } else if (key === 'i') {
+                if (abs < 0.001) newVal = "0.000001"; // µA
+                else if (abs < 1) newVal = "0.001"; // mA
+                else newVal = "1";
+            } else if (key === 'r') {
+                if (abs >= 1000000) newVal = "1000000"; // MΩ
+                else if (abs >= 1000) newVal = "1000"; // kΩ
+                else newVal = "1";
+            } else if (key === 'p') {
+                if (abs < 1) newVal = "0.001"; // mW
+                else if (abs >= 1000) newVal = "1000"; // kW
+                else newVal = "1";
+            }
+            
+            // Update the dropdown
+            units[key].value = newVal;
+            
+            // Return scaled number
+            return baseVal / parseFloat(newVal);
+        }
+
+        function calculate() {
+            const getVal = (k) => inputs[k].value ? parseFloat(inputs[k].value) * parseFloat(units[k].value) : null;
+            
+            let v = getVal('v');
+            let i = getVal('i');
+            let r = getVal('r');
+            let p = getVal('p');
+
+            let count = [v, i, r, p].filter(x => x !== null).length;
+            if (count !== 2) {
+                showError("Introduce exactamente 2 valores.");
+                return;
+            }
+
+            try {
+                if (v !== null && i !== null) { r = v / i; p = v * i; }
+                else if (v !== null && r !== null) { i = v / r; p = v*v/r; }
+                else if (v !== null && p !== null) { i = p / v; r = v*v/p; }
+                else if (i !== null && r !== null) { v = i * r; p = i*i*r; }
+                else if (i !== null && p !== null) { v = p / i; r = p/(i*i); }
+                else if (p !== null && r !== null) { v = Math.sqrt(p*r); i = Math.sqrt(p/r); }
+
+                // Display results
+                const setRes = (key, val) => {
+                    if (inputs[key].value === '') {
+                        const displayVal = autoScale(key, val);
+                        
+                        // Format nice decimals
+                        let formatted = parseFloat(displayVal.toFixed(4));
+                        if (Math.abs(formatted) < 0.0001 && formatted !== 0) formatted = displayVal.toExponential(2);
+                        
+                        inputs[key].value = formatted;
+                        inputs[key].classList.add('text-purple-700');
+                    }
+                };
+
+                setRes('v', v);
+                setRes('i', i);
+                setRes('r', r);
+                setRes('p', p);
+
+            } catch (e) {
+                showError("Error matemático.");
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') calculate();
+        });
+    </script>
+</body>
+</html>
